@@ -82,9 +82,13 @@ def find_check(checks: list[Paycheck], person_id: int | None, ordinal: int | Non
     return mine[-1]
 
 
+def bill_line(s: Session, bill: MonthBill) -> PaycheckLine | None:
+    return s.scalar(select(PaycheckLine).where(PaycheckLine.month_bill_id == bill.id))
+
+
 def attach_bill(s: Session, bill: MonthBill, check: Paycheck | None) -> None:
     """Put a bill on a check (or take it off). Keeps the check's bill line in sync."""
-    line = s.scalar(select(PaycheckLine).where(PaycheckLine.month_bill_id == bill.id))
+    line = bill_line(s, bill)
     bill.assigned_check_id = check.id if check else None
     if check is None:
         if line:

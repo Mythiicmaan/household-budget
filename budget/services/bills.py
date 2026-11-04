@@ -129,7 +129,12 @@ def update_bill(
     if note is not None:
         bill.note = note
     target_check = bill.assigned_check if check is ... else check
-    paychecks.attach_bill(s, bill, target_check)
+    target_id = target_check.id if target_check else None
+    # Only touch check lines when the bill has its own line or moves to another check.
+    # (Imported checks may cover several bills with one combined line; editing a bill's
+    # amount must not add a second line for it.)
+    if paychecks.bill_line(s, bill) is not None or target_id != bill.assigned_check_id:
+        paychecks.attach_bill(s, bill, target_check)
     if bill.paid and bill.paid_txn_id:
         txn = s.get(Txn, bill.paid_txn_id)
         if txn and txn.deleted_at is None:
