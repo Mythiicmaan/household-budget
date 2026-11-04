@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "household-budget"
+version = "0.1.0"
+description = "Self-hosted household budget app: fast phone entry, paycheck planning, and a monthly surplus/deficit dashboard."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.32,<1",
+    "jinja2>=3.1,<4",
+    "python-multipart>=0.0.12",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.14,<2",
+    "argon2-cffi>=23.1",
+    "openpyxl>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.27",
+    "ruff>=0.8",
+    "pre-commit>=4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["budget*"]
+
+[tool.setuptools.package-data]
+budget = ["templates/**/*", "static/**/*", "migrations/**/*", "alembic.ini"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["budget/static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]
+"budget/migrations/**" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

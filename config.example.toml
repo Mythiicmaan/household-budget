@@ -1,0 +1,91 @@
+# Example configuration, using the FAKE sample household.
+#
+# Copy this file to %BUDGET_DATA_DIR%\config.toml (default C:\BudgetData\config.toml)
+# and edit it there. The real config.toml is git-ignored and must never be committed.
+#
+# Money values are strings in dollars ("600.00") so nothing is ever stored as a float.
+
+[app]
+# Label for the shared account that each check's remainder goes to.
+account_name = "Joint"
+# Hosts allowed in the Host header besides localhost and *.ts.net (Tailscale).
+extra_allowed_hosts = []
+
+[auth]
+# The PIN hash lives in the database (set it with `python -m budget set-pin`
+# or in Settings). These options control how sign-in behaves.
+localhost_skip_pin = true   # the desktop itself (http://localhost:8765) skips the PIN
+session_days = 90
+
+[backup]
+# Folder for nightly backups (set up in a later phase).
+dir = 'E:\Backups\HouseholdBudget'
+
+# ---------------------------------------------------------------------------
+# Seed values: used ONLY when the database is created for the first time.
+# After that, edit everything in the app's Settings page.
+# ---------------------------------------------------------------------------
+
+[[seed.categories]]
+name = "Groceries"
+target = "600.00"
+
+[[seed.categories]]
+name = "Gas"
+target = "200.00"
+
+[[seed.categories]]
+name = "Eating Out"
+
+[[seed.categories]]
+name = "Kids"
+
+[[seed.categories]]
+name = "Shopping"
+
+[[seed.categories]]
+name = "Bills"
+
+[[seed.categories]]
+name = "Other"
+
+# Each person is paid every `interval_days`, counting from `pay_anchor`.
+[[seed.people]]
+name = "Alex"
+pay_anchor = "2027-01-01"
+interval_days = 14
+default_check = "2000.00"
+
+[[seed.people]]
+name = "Sam"
+pay_anchor = "2027-01-08"
+interval_days = 14
+default_check = "1500.00"
+
+# Lines added to EVERY check. day_offset is days after the pay date
+# (0 = the pay day itself, 3 = the following Monday for a Friday check).
+[[seed.per_check_lines]]
+kind = "groceries"
+label = "Groceries"
+amount = "150.00"
+day_offset = 0
+
+[[seed.per_check_lines]]
+kind = "daycare"
+label = "Childcare"
+amount = "100.00"
+day_offset = 3
+
+# ---------------------------------------------------------------------------
+# Spreadsheet importer options
+# ---------------------------------------------------------------------------
+[import]
+# The month that becomes the first live (editable) month, "YYYY-MM".
+live_month = "2027-01"
+
+# Optional keyword -> category auto-tagging for imported history.
+[import.auto_tag]
+"grocery" = "Groceries"
+"gas" = "Gas"
+"fuel" = "Gas"
+"pizza" = "Eating Out"

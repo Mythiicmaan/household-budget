@@ -1,0 +1,34 @@
+# --- Privacy guardrails (do not weaken) ---
+*.db
+*.db-*
+*.sqlite*
+*.xlsx
+*.xls
+*.csv
+.env
+.env.*
+config.toml
+data/
+logs/
+backups/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# --- Claude Code local settings ---
+.claude/settings.local.json

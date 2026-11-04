@@ -1,0 +1,25 @@
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: check-private-data
+        name: Block private household data
+        entry: python scripts/check_private_data.py
+        language: system
+        types: [file]
+        stages: [pre-commit]
+      - id: check-private-data-msg
+        name: Block private data in commit message
+        entry: python scripts/check_private_data.py --commit-msg
+        language: system
+        stages: [commit-msg]
