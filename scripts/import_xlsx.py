@@ -67,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
                 workbook,
                 live_key=options.get("live_month"),
                 auto_tag={str(k): str(v) for k, v in options.get("auto_tag", {}).items()},
+                account_name=cfg.account_name,
             )
     except ImportProblem as exc:
         engine.dispose()

@@ -115,7 +115,14 @@ def build_workbook(path):
         [(-1200, "Rent December 2026", None), (-150, "Groceries 12-18-26", None)],
         650,
     )
-    block(45, "Sam BONUS Calculation (12-18-2026)", 500, [(-100, "Savings", None)], 400)
+    block(
+        45,
+        "Sam BONUS Calculation (12-18-2026)",
+        500,
+        [(-100, "Joint", None), (-50, "Savings", None)],
+        350,
+    )
+    live["C48"] = "Gifts"  # the sheet's remainder label: what's left goes to gifts
     block(
         49,
         "Sam Check 2 Calculation (12-25-2026)",
@@ -152,6 +159,7 @@ def imported(s, workbook):
         workbook,
         live_key="2026-12",
         auto_tag={"pizza": "Eating Out", "fuel": "Gas", "market": "Groceries"},
+        account_name="Joint",
     )
     s.commit()
     return result
@@ -237,7 +245,7 @@ def test_live_people_checks_and_remainders(s, imported):
         "Alex check 1": 162500,
         "Sam check 1": 131800,
         "Alex check 2": 65000,
-        "Sam BONUS": 40000,
+        "Sam BONUS": 10000,
         "Sam check 2": 145500,
     }
     a1 = checks[0]
@@ -318,3 +326,13 @@ def test_name_matching():
     assert _names_match("StreamBox November 2026", "Stream Box Extra")
     assert _names_match("Books/Music November 2026", "Books and Music")
     assert not _names_match("Card A", "Internet")
+
+
+def test_joint_account_line_becomes_the_remainder(s, imported):
+    bonus = next(c for c in paychecks.checks_in_month(s, imported.live_month) if c.is_one_off)
+    assert [(ln.label, ln.amount_cents) for ln in bonus.lines] == [
+        ("Gifts", -35000),
+        ("Savings", -5000),
+    ]
+    assert paychecks.remainder(bonus) == 10000  # the 100 that went to the joint account
+    assert any("re-pointed to the joint account" in line for line in imported.report)

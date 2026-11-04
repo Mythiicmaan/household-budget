@@ -201,6 +201,8 @@ class CheckBlock:
     cents: int
     lines: list[tuple[int, int, str]] = field(default_factory=list)  # row, cents, label
     sheet_remainder: int | None = None
+    sum_label: str = ""  # what the sheet called the remainder, e.g. "To joint" or "Gifts"
+    expected_remainder: int | None = None  # set when the remainder was re-pointed
 
 
 @dataclass
@@ -389,6 +391,7 @@ def _parse_checks(sheet: Sheet, tab: TabData) -> None:
             value, formula = sheet.raw(f"B{r}")
             if isinstance(formula, str) and formula.lower().startswith("=sum"):
                 block.sheet_remainder, _ = cell_cents(sheet, f"B{r}")
+                block.sum_label = sheet.text(f"C{r}")
                 found_sum = True
                 r += 1
                 break
@@ -552,6 +555,7 @@ def import_workbook(
     live_key: str | None = None,
     auto_tag: dict[str, str] | None = None,
     bills_category: str = "Bills",
+    account_name: str | None = None,
 ) -> ImportResult:
     from openpyxl import load_workbook
 
@@ -642,7 +646,9 @@ def import_workbook(
             live_month, live_tab = month, tab
 
     assert live_month is not None and live_tab is not None
-    problems += _import_live(s, live_month, live_tab, report, cats, auto_tag, bills_category)
+    problems += _import_live(
+        s, live_month, live_tab, report, cats, auto_tag, bills_category, account_name
+    )
     report.append("")
     report.append(f"Done. {problems} item(s) need a look." if problems else "Done. No problems.")
     return ImportResult(report=report, live_month=live_month, problems=problems)
@@ -656,6 +662,7 @@ def _import_live(
     cats: dict[str, Category],
     auto_tag: dict[str, str],
     bills_category: str,
+    account_name: str | None = None,
 ) -> int:
     problems = 0
     label = f"{calendar.month_name[month.month]} {month.year}"
@@ -708,6 +715,7 @@ def _import_live(
                     sort_order=i,
                 )
             )
+        _repoint_remainder(block, check, account_name, report)
         s.add(check)
         checks.append((block, check))
     s.flush()
@@ -807,16 +815,25 @@ def _import_live(
             check.received = True
             check.received_txn_id = txn.id
         remainder = check.amount_cents + sum(ln.amount_cents for ln in check.lines)
-        ok = block.sheet_remainder is None or block.sheet_remainder == remainder
+        expected = (
+            block.expected_remainder
+            if block.expected_remainder is not None
+            else block.sheet_remainder
+        )
+        ok = expected is None or expected == remainder
         if not ok:
             problems += 1
         report.append(
             f"  Check {check.label} {check.pay_date}: amount {_fmt(check.amount_cents)}, "
             f"{len(check.lines)} lines, remainder {_fmt(remainder)} "
             + (
-                "(matches sheet)"
-                if block.sheet_remainder is not None and ok
-                else f"(! sheet says {_fmt(block.sheet_remainder)})"
+                (
+                    "(matches sheet, re-pointed to the joint account)"
+                    if block.expected_remainder is not None
+                    else "(matches sheet)"
+                )
+                if expected is not None and ok
+                else f"(! sheet says {_fmt(expected)})"
                 if not ok
                 else "(no sheet total)"
             )
@@ -855,6 +872,50 @@ def _import_live(
             f"    {cat_name} remaining: {_fmt(remaining)} ({flag} sheet {_fmt(sheet_value)})"
         )
     return problems
+
+
+def _repoint_remainder(
+    block: CheckBlock, check: Paycheck, account_name: str | None, report: list[str]
+) -> None:
+    """Some checks (e.g. a bonus) list the joint account as a line and send the remainder
+    somewhere else. The app's rule is "remainder goes to the joint account", so swap them:
+    the joint-account line goes away and the remainder becomes a line under the sheet's
+    label. The money in and out is unchanged; only which part is "left over" moves."""
+    if not account_name or not block.sum_label:
+        return
+    left_over = (
+        block.sheet_remainder
+        if block.sheet_remainder is not None
+        else block.cents + sum(c for _r, c, _l in block.lines)
+    )
+    name = account_name.strip().lower()
+
+    def is_account(label: str) -> bool:
+        return label.strip().strip("?").strip().lower() in (name, f"to {name}")
+
+    if is_account(block.sum_label) or name in block.sum_label.lower():
+        return
+    line = next((ln for ln in check.lines if is_account(ln.label)), None)
+    if line is None:
+        return
+    pos = check.lines.index(line)
+    check.lines.remove(line)
+    check.lines.insert(
+        pos,
+        PaycheckLine(
+            kind="other",
+            label=block.sum_label[:160],
+            amount_cents=-left_over,
+            sort_order=line.sort_order,
+        ),
+    )
+    block.expected_remainder = -line.amount_cents
+    report.append(
+        f"  note: {check.label}: the sheet sends {_fmt(-line.amount_cents)} to "
+        f"{account_name} as a line and leaves {_fmt(left_over)} for "
+        f"{block.sum_label!r}; imported with {block.sum_label!r} as a line and "
+        f"{_fmt(-line.amount_cents)} as the remainder to {account_name}."
+    )
 
 
 def _count(items) -> dict:
