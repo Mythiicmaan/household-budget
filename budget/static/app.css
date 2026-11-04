@@ -62,7 +62,8 @@ h3 { font-size: 0.95rem; }
 .right { text-align: right; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .stack > * + * { margin-top: 12px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.grid2 > * { min-width: 0; }
 
 .card {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
@@ -105,6 +106,14 @@ input[type=text], input[type=date], input[type=number], input[type=password], in
   width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
   background: var(--card); font-size: 16px; /* 16px stops iOS zoom */
 }
+/* iPhone Safari gives date fields a built-in minimum width, which made them spill into the
+   next column; let them shrink and match the height of the other fields. */
+input[type=date] {
+  -webkit-appearance: none; appearance: none; display: block;
+  min-width: 0; max-width: 100%; min-height: 48px; text-align: left;
+}
+input[type=date]::-webkit-date-and-time-value { text-align: left; }
+select { min-height: 48px; }
 input.amount-input { font-size: 2rem; font-weight: 700; text-align: center; padding: 10px; }
 .field { margin: 10px 0; }
 .inline { display: flex; gap: 8px; align-items: end; }
