@@ -84,8 +84,34 @@ def logout():
 
 @router.get("/health")
 def health(request: Request, s: Session = Depends(get_db)):
+    from budget import backup
+
     s.execute(select(1))
-    return {"status": "ok", "time": date.today().isoformat()}
+    st = backup.status(s, request.app.state.config.backup_dir)
+    return {
+        "status": "ok",
+        "time": date.today().isoformat(),
+        "backup": {
+            "configured": st.configured,
+            "ok": st.ok,
+            "last_ok_at": st.last_ok_at.isoformat() if st.last_ok_at else None,
+            "problem": st.problem,
+        },
+    }
+
+
+@router.post("/backup")
+async def backup_now(request: Request):
+    import asyncio
+
+    from budget.app import run_backup_now
+
+    result = await asyncio.to_thread(run_backup_now, request.app)
+    if result is None:
+        return redirect(
+            "/settings#data", "Backup FAILED. See the message on this page.", error=True
+        )
+    return redirect("/settings#data", f"Backed up to {result.file.name}")
 
 
 @router.get("/api/summary")

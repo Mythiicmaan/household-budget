@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
@@ -37,6 +39,34 @@ CSP = (
 )
 
 
+async def _backup_loop(app: FastAPI) -> None:
+    """Checks once a minute whether the nightly backup is due (2 AM, or catch-up)."""
+    from budget import backup
+
+    cfg = app.state.config
+    while True:
+        try:
+            with session_scope(app.state.sessionmaker) as s:
+                is_due = backup.due(s, datetime.now())
+            if is_due:
+                await asyncio.to_thread(run_backup_now, app)
+        except Exception:  # never let the loop die; the failure is recorded and logged
+            log.exception("Backup check failed")
+        await asyncio.sleep(60 if cfg.backup_dir else 3600)
+
+
+def run_backup_now(app: FastAPI):
+    """Run one backup and record the result (used by the scheduler and the button)."""
+    from budget import backup
+
+    cfg = app.state.config
+    with session_scope(app.state.sessionmaker) as s:
+        try:
+            return backup.backup_and_record(s, cfg.paths.db, cfg.backup_dir)
+        except backup.BackupError:
+            return None
+
+
 def create_app(paths: Paths | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -60,7 +90,12 @@ def create_app(paths: Paths | None = None) -> FastAPI:
         app.state.refresh_auth = refresh_auth
         with session_scope(factory) as s:
             refresh_auth(s)
+        scheduler = None
+        if cfg.backup_dir is not None and cfg.nightly_backup:
+            scheduler = asyncio.create_task(_backup_loop(app))
         yield
+        if scheduler:
+            scheduler.cancel()
         engine.dispose()
 
     app = FastAPI(

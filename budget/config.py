@@ -68,6 +68,10 @@ class Config:
         return Path(d) if d else None
 
     @property
+    def nightly_backup(self) -> bool:
+        return bool(self.section("backup").get("nightly", True))
+
+    @property
     def seed(self) -> dict[str, Any]:
         return self.section("seed")
 

@@ -24,6 +24,9 @@
   </header>
 
   <main class="wrap">
+    {% if backup_status is defined and backup_status.problem %}
+    <a class="banner locked row" href="/settings#data"><span>⚠ Backup problem: {{ backup_status.problem }}</span><strong>Fix →</strong></a>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 

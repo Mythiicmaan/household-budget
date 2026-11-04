@@ -101,8 +101,11 @@ def render(request: Request, name: str, ctx: dict | None = None, status_code: in
         "add_token": uuid.uuid4().hex,
     }
     if s is not None:
+        from budget import backup
+
         context["live"] = live_month(s)
         context["qa"] = quick_add_context(s)
+        context["backup_status"] = backup.status(s, request.app.state.config.backup_dir)
     context.update(ctx or {})
     context.pop("s", None)
     resp = templates.TemplateResponse(request, name, context, status_code=status_code)

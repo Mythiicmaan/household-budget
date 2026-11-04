@@ -141,7 +141,14 @@
 
 <section class="card" id="data">
   <h2>Backup &amp; export</h2>
-  <p class="muted small">Nightly backups are set up in a later step{% if backup_dir %} (target: {{ backup_dir }}){% endif %}.</p>
+  {% if backup_dir %}
+  <p class="small">Nightly at 2:00 AM to <strong>{{ backup_dir }}</strong> (30 daily + 12 monthly kept).</p>
+  <p class="small">Last good backup: <strong>{{ backup_status.last_ok_at.strftime('%b %d, %I:%M %p') if backup_status.last_ok_at else 'never' }}</strong>
+    {% if backup_status.problem %}<br><span class="neg">{{ backup_status.problem }}</span>{% endif %}</p>
+  <form method="post" action="/backup" data-once style="margin-bottom:10px"><button class="btn small primary" type="submit">Back up now</button></form>
+  {% else %}
+  <p class="muted small">Backups are off: set <code>[backup] dir</code> in config.toml.</p>
+  {% endif %}
   <div class="row" style="flex-wrap:wrap; justify-content:flex-start">
     <a class="btn small" hx-boost="false" href="/export?scope=month&fmt=xlsx">This month (.xlsx)</a>
     <a class="btn small" hx-boost="false" href="/export?scope=month&fmt=csv">This month (.csv)</a>
