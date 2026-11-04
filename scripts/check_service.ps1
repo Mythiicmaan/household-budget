@@ -29,12 +29,19 @@ try {
     Write-Host 'Task details:      need an admin window (or the task is not installed).' -ForegroundColor Yellow
 }
 
-$proc = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*-m budget*' } | Select-Object -First 1
-if ($proc) {
+# Find the app by the process listening on the port. (Without admin, Windows hides other
+# accounts' command lines, so matching on "-m budget" would miss the service.)
+$listener = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($listener) {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
     $owner = (Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction SilentlyContinue).User
-    Write-Host "App process:       running since $($proc.CreationDate) as '$(if ($owner) { $owner } else { 'another user' })'"
+    if (-not $owner) { $owner = 'another account (run as admin to see which)' }
+    Write-Host "App process:       running since $($proc.CreationDate) as $owner"
+    if ($signIn -and $proc.CreationDate -lt $signIn) {
+        Write-Host '  -> Started BEFORE you signed in: startup without sign-in works.' -ForegroundColor Green
+    }
 } else {
-    Write-Host 'App process:       NOT running' -ForegroundColor Red
+    Write-Host "App process:       nothing is listening on port $Port" -ForegroundColor Red
 }
 
 try {
