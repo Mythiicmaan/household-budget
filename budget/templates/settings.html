@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block heading %}Settings{% endblock %}
+{% block content %}
+<nav class="month-nav">
+  <a href="#categories">Categories</a><a href="#people">Pay schedules</a><a href="#lines">Per-check lines</a>
+  <a href="#templates">Bill template</a><a href="#months">Months</a><a href="#pin">PIN</a><a href="#data">Backup &amp; export</a>
+</nav>
+
+<section class="card" id="categories">
+  <h2>Categories &amp; soft targets</h2>
+  <p class="muted small">A target shows a "remaining" bar on the dashboard. It never blocks anything.</p>
+  {% for c in categories %}
+  <form method="post" action="/settings/category/{{ c.id }}" class="inline field">
+    <div><input name="name" type="text" value="{{ c.name }}" aria-label="Name"></div>
+    <div class="shrink" style="width:100px"><input name="target" type="text" inputmode="decimal" value="{{ c.monthly_target_cents | input_cents }}" placeholder="target" aria-label="Monthly target"></div>
+    <label class="check shrink" title="Hide"><input type="checkbox" name="hidden" {{ 'checked' if c.hidden }}>hide</label>
+    <button class="btn small shrink" type="submit">Save</button>
+    <button class="btn small shrink" type="submit" name="move" value="up" aria-label="Move up">↑</button>
+    <button class="btn small shrink" type="submit" name="move" value="down" aria-label="Move down">↓</button>
+  </form>
+  {% endfor %}
+  <form method="post" action="/settings/category/add" class="inline field">
+    <div><input name="name" type="text" placeholder="New category" required></div>
+    <div class="shrink" style="width:100px"><input name="target" type="text" inputmode="decimal" placeholder="target"></div>
+    <button class="btn small primary shrink" type="submit">Add</button>
+  </form>
+</section>
+
+<section class="card" id="people">
+  <h2>Pay schedules</h2>
+  <p class="muted small">Each person is paid every N days counting from the anchor date. Used when a month is started.</p>
+  {% for p in people %}
+  <form method="post" action="/settings/person/{{ p.id }}" class="stack field">
+    <div class="inline">
+      <div><label>Name</label><input name="name" type="text" value="{{ p.name }}"></div>
+      <div><label>Anchor pay date</label><input name="pay_anchor" type="date" value="{{ p.pay_anchor_date.isoformat() if p.pay_anchor_date else '' }}"></div>
+    </div>
+    <div class="inline">
+      <div><label>Every (days)</label><input name="interval" type="number" min="1" value="{{ p.pay_interval_days }}"></div>
+      <div><label>Usual check</label><input name="default_check" type="text" inputmode="decimal" value="{{ p.default_check_cents | input_cents }}"></div>
+      <label class="check shrink"><input type="checkbox" name="active" {{ 'checked' if p.active }}>active</label>
+      <button class="btn small shrink" type="submit">Save</button>
+    </div>
+  </form>
+  {% endfor %}
+  <details><summary class="small">+ Add person</summary>
+    <form method="post" action="/settings/person/add" class="inline">
+      <div><input name="name" type="text" placeholder="Name" required></div>
+      <div><input name="pay_anchor" type="date"></div>
+      <div><input name="default_check" type="text" inputmode="decimal" placeholder="check"></div>
+      <button class="btn small primary shrink" type="submit">Add</button>
+    </form>
+  </details>
+</section>
+
+<section class="card" id="lines">
+  <h2>Lines on every check</h2>
+  <p class="muted small">Day offset is days after payday (3 = the Monday after a Friday check).</p>
+  <form method="post" action="/settings/per-check-lines">
+    {% for t in line_templates %}
+    <div class="inline field">
+      <select name="kind" class="shrink" style="width:110px">{% for k in ["groceries", "daycare", "savings", "card_payment", "other"] %}<option value="{{ k }}" {{ 'selected' if t.kind == k }}>{{ k.replace('_',' ') }}</option>{% endfor %}</select>
+      <div><input name="label" type="text" value="{{ t.label }}"></div>
+      <div class="shrink" style="width:90px"><input name="amount" type="text" inputmode="decimal" value="{{ t.amount_cents | input_cents }}"></div>
+      <div class="shrink" style="width:60px"><input name="day_offset" type="number" value="{{ t.day_offset }}"></div>
+      <label class="check shrink"><input type="checkbox" name="remove" value="{{ loop.index0 }}">✕</label>
+    </div>
+    {% endfor %}
+    <div class="inline field">
+      <select name="kind" class="shrink" style="width:110px">{% for k in ["groceries", "daycare", "savings", "card_payment", "other"] %}<option value="{{ k }}">{{ k.replace('_',' ') }}</option>{% endfor %}</select>
+      <div><input name="label" type="text" placeholder="New line"></div>
+      <div class="shrink" style="width:90px"><input name="amount" type="text" inputmode="decimal" placeholder="0.00"></div>
+      <div class="shrink" style="width:60px"><input name="day_offset" type="number" value="0"></div>
+      <span class="shrink" style="width:30px"></span>
+    </div>
+    <button class="btn small primary" type="submit">Save lines</button>
+  </form>
+</section>
+
+<section class="card" id="templates">
+  <h2>Bill template</h2>
+  <p class="muted small">New months copy these bills, using last month's amount when there is one.</p>
+  {% for t in bill_templates %}
+  <details class="field">
+    <summary class="row"><span>{{ t.name }}{% if not t.active %} <span class="badge">inactive</span>{% endif %}
+      <span class="muted small">· {{ t.person.name if t.person else 'no person' }}{% if t.assigned_check_ordinal %} check {{ t.assigned_check_ordinal }}{% endif %}</span></span>
+      <span class="amt">{{ t.default_amount_cents | money }}</span></summary>
+    <form method="post" action="/settings/bill-template/{{ t.id }}" class="stack">
+      <div class="inline">
+        <div><input name="name" type="text" value="{{ t.name }}"></div>
+        <div class="shrink" style="width:100px"><input name="amount" type="text" inputmode="decimal" value="{{ t.default_amount_cents | input_cents }}"></div>
+      </div>
+      <div class="inline">
+        <select name="person_id"><option value="">No person</option>{% for p in people %}<option value="{{ p.id }}" {{ 'selected' if t.assigned_person_id == p.id }}>{{ p.name }}</option>{% endfor %}</select>
+        <select name="ordinal"><option value="">Any check</option>{% for n in [1,2,3] %}<option value="{{ n }}" {{ 'selected' if t.assigned_check_ordinal == n }}>Check {{ n }}</option>{% endfor %}</select>
+      </div>
+      <input name="note" type="text" value="{{ t.note }}" placeholder="note">
+      <label class="check"><input type="checkbox" name="active" {{ 'checked' if t.active }}> Active</label>
+      <button class="btn small" type="submit">Save</button>
+    </form>
+  </details>
+  {% endfor %}
+  <details><summary class="small">+ Add template bill</summary>
+    <form method="post" action="/settings/bill-template/add" class="stack">
+      <div class="inline"><div><input name="name" type="text" placeholder="Name" required></div>
+        <div class="shrink" style="width:100px"><input name="amount" type="text" inputmode="decimal" placeholder="0.00"></div></div>
+      <div class="inline">
+        <select name="person_id"><option value="">No person</option>{% for p in people %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+        <select name="ordinal"><option value="">Any check</option>{% for n in [1,2,3] %}<option value="{{ n }}">Check {{ n }}</option>{% endfor %}</select>
+      </div>
+      <input name="note" type="text" placeholder="note">
+      <button class="btn small primary" type="submit">Add</button>
+    </form>
+  </details>
+</section>
+
+<section class="card" id="months">
+  <h2>Months</h2>
+  <p><a class="btn small" href="/month/new">Start next month</a></p>
+  <ul class="list">
+    {% for mo in months %}
+    <li class="row"><a href="/?m={{ mo.key }}">{{ month_label(mo.year, mo.month) }}</a>
+      <span class="muted small">{{ 'history' if mo.is_history else '' }} {{ 'locked' if mo.locked else 'open' }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card" id="pin">
+  <h2>{{ 'Change' if pin_set else 'Set' }} PIN</h2>
+  <p class="muted small">Phones need this PIN once, then stay signed in. {% if not pin_set %}<strong>No PIN is set, so only this PC can open the app.</strong>{% endif %}</p>
+  <form method="post" action="/settings/pin" class="stack" autocomplete="off">
+    {% if pin_set %}<div><label>Current PIN</label><input name="current" type="password" inputmode="numeric" autocomplete="off"></div>{% endif %}
+    <div class="inline">
+      <div><label>New PIN</label><input name="new" type="password" inputmode="numeric" autocomplete="new-password" required></div>
+      <div><label>Repeat</label><input name="confirm" type="password" inputmode="numeric" autocomplete="new-password" required></div>
+    </div>
+    <button class="btn small primary" type="submit">Save PIN</button>
+  </form>
+  {% if not is_local %}<form method="post" action="/logout" style="margin-top:8px"><button class="btn small" type="submit">Sign out this device</button></form>{% endif %}
+</section>
+
+<section class="card" id="data">
+  <h2>Backup &amp; export</h2>
+  <p class="muted small">Nightly backups are set up in a later step{% if backup_dir %} (target: {{ backup_dir }}){% endif %}.</p>
+  <div class="row" style="flex-wrap:wrap; justify-content:flex-start">
+    <a class="btn small" hx-boost="false" href="/export?scope=month&fmt=xlsx">This month (.xlsx)</a>
+    <a class="btn small" hx-boost="false" href="/export?scope=month&fmt=csv">This month (.csv)</a>
+    <a class="btn small" hx-boost="false" href="/export?scope=all&fmt=xlsx">Everything (.xlsx)</a>
+    <a class="btn small" hx-boost="false" href="/export?scope=all&fmt=csv">Everything (.csv)</a>
+  </div>
+</section>
+{% endblock %}

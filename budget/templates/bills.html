@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block heading %}Bills · {{ month_label(month.year, month.month) }}{% endblock %}
+{% block content %}
+{% include "_month_banner.html" %}
+{% macro check_select(selected_id, name="check_id") %}
+<select name="{{ name }}">
+  <option value="">No check</option>
+  {% for c in checks %}<option value="{{ c.id }}" {{ 'selected' if c.id == selected_id }}>{{ c.label }} ({{ c.pay_date | short_date }})</option>{% endfor %}
+</select>
+{% endmacro %}
+
+<section class="card row">
+  <div class="stat"><div class="label">Bills this month</div><div class="value">{{ total | money }}</div></div>
+  <div class="stat right"><div class="label">Still unpaid</div><div class="value {{ 'warn' if unpaid_total }}">{{ unpaid_total | money }}</div></div>
+</section>
+
+<section class="card flush">
+  <ul class="list">
+    {% for b in bills %}
+    <li>
+      <div class="row">
+        <details style="flex:1">
+          <summary>
+            <strong>{{ b.name }}</strong> {% if b.paid %}<span class="badge paid">paid</span>{% endif %}
+            <br><span class="muted small">{{ b.assigned_check.label if b.assigned_check else "No check" }}{% if b.note %} · {{ b.note }}{% endif %}</span>
+          </summary>
+          {% if not month.locked %}
+          <form method="post" action="/bill/{{ b.id }}" class="stack">
+            <div class="inline">
+              <div><label>Name</label><input name="name" type="text" value="{{ b.name }}"></div>
+              <div class="shrink" style="width:120px"><label>Amount</label><input name="amount" type="text" inputmode="decimal" value="{{ b.amount_cents | input_cents }}"></div>
+            </div>
+            <div><label>Paid from</label>{{ check_select(b.assigned_check_id) }}</div>
+            <div><label>Note</label><input name="note" type="text" value="{{ b.note }}"></div>
+            <label class="check"><input type="checkbox" name="also_template"> Also update the template for future months</label>
+            <button class="btn primary" type="submit">Save</button>
+          </form>
+          <form method="post" action="/bill/{{ b.id }}/delete" hx-confirm="Remove {{ b.name }} from this month?" style="margin-top:8px">
+            <label class="check"><input type="checkbox" name="also_template"> Also remove from future months</label>
+            <button class="btn danger small" type="submit">Remove bill</button>
+          </form>
+          {% endif %}
+        </details>
+        <span class="amt">{{ b.amount_cents | money }}</span>
+        {% if not month.locked %}
+        <form method="post" action="/bill/{{ b.id }}/toggle" hx-swap="innerHTML show:none">
+          <button class="btn small {{ 'primary' if not b.paid }}" type="submit" aria-label="Toggle paid">{{ 'Undo' if b.paid else 'Paid' }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% else %}
+    <li class="muted">No bills this month.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if not month.locked %}
+<details class="card">
+  <summary><strong>+ Add a bill</strong></summary>
+  <form method="post" action="/bills/{{ month.id }}/add" class="stack">
+    <div class="inline">
+      <div><label>Name</label><input name="name" type="text" required></div>
+      <div class="shrink" style="width:120px"><label>Amount</label><input name="amount" type="text" inputmode="decimal" required></div>
+    </div>
+    <div><label>Paid from</label>{{ check_select(None) }}</div>
+    <div><label>Note</label><input name="note" type="text" placeholder="e.g. quarterly, budgeted monthly"></div>
+    <label class="check"><input type="checkbox" name="also_template" checked> Add to future months too</label>
+    <button class="btn primary" type="submit">Add bill</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}

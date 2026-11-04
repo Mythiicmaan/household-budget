@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Add · Budget{% endblock %}
+{% block heading %}Add entry{% endblock %}
+{% block content %}
+{% if live %}
+<div class="card">
+  {% include "_quick_add_form.html" %}
+</div>
+{% else %}
+<div class="card">Start a month first. <a href="/month/new">Start a month →</a></div>
+{% endif %}
+{% endblock %}

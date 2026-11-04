@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block heading %}Cards{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="stat"><div class="label">Total on active cards</div><div class="big">{{ total | money }}</div></div>
+  <p class="muted small">Balances are typed in by hand. Payments in the ledger with "Payment to card →" lower them automatically.</p>
+</section>
+
+<section class="card flush">
+  <ul class="list">
+    {% for c in active %}
+    <li>
+      <details>
+        <summary class="row">
+          <span><strong>{{ c.name }}</strong><br><span class="muted small">Updated {{ c.updated_at.strftime('%b %d') }}</span></span>
+          <span class="amt">{{ c.balance_cents | money }}</span>
+        </summary>
+        <form method="post" action="/card/{{ c.id }}/balance" class="inline">
+          <div><label>New balance</label><input name="balance" type="text" inputmode="decimal" value="{{ c.balance_cents | input_cents }}"></div>
+          <div><label>Note</label><input name="note" type="text" placeholder="e.g. store order"></div>
+          <button class="btn primary shrink" type="submit">Update</button>
+        </form>
+        <table class="simple small" style="margin-top:8px">
+          {% for e in c.events[:8] %}
+          <tr><td>{{ e.created_at.strftime('%b %d') }}</td><td>{{ e.note }}</td>
+            <td class="amt">{{ e.delta_cents | money(true) }}</td><td class="amt">{{ e.balance_cents | money }}</td></tr>
+          {% endfor %}
+        </table>
+        <div class="row" style="margin-top:8px">
+          <form method="post" action="/card/{{ c.id }}/archive"><input type="hidden" name="archived" value="on">
+            <button class="btn small" type="submit">Archive (paid off)</button></form>
+          <form method="post" action="/card/{{ c.id }}/delete" hx-confirm="Delete {{ c.name }} and its history? This can't be undone.">
+            <button class="btn small danger" type="submit">Delete</button></form>
+        </div>
+      </details>
+    </li>
+    {% else %}
+    <li class="muted">No cards yet.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<details class="card">
+  <summary><strong>+ Add card</strong></summary>
+  <form method="post" action="/cards/add" class="inline">
+    <div><label>Name</label><input name="name" type="text" required placeholder="e.g. Card A"></div>
+    <div><label>Balance owed</label><input name="balance" type="text" inputmode="decimal" placeholder="0.00"></div>
+    <button class="btn primary shrink" type="submit">Add</button>
+  </form>
+</details>
+
+{% if archived %}
+<details class="card">
+  <summary><strong>Archived cards</strong> <span class="muted small">({{ archived|length }})</span></summary>
+  <ul class="list">
+    {% for c in archived %}
+    <li class="row"><span>{{ c.name }} <span class="muted small">{{ c.balance_cents | money }}</span></span>
+      <span class="row">
+        <form method="post" action="/card/{{ c.id }}/archive"><input type="hidden" name="archived" value="">
+          <button class="btn small" type="submit">Restore</button></form>
+        <form method="post" action="/card/{{ c.id }}/delete" hx-confirm="Delete {{ c.name }} and its history? This can't be undone.">
+          <button class="btn small danger" type="submit">Delete</button></form>
+      </span></li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% endblock %}

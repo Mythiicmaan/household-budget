@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block heading %}{{ sm.label }}{% endblock %}
+{% block content %}
+{% set month = sm.month %}
+{% include "_month_banner.html" %}
+
+{% if show_start_next and month.id == live.id %}
+<a class="banner info row" href="/month/new"><span>Month's almost over.</span><strong>Start {{ preview.label }} →</strong></a>
+{% endif %}
+
+<section class="card">
+  <div class="stat"><div class="label">Running surplus / deficit</div></div>
+  <div class="big {{ 'pos' if sm.running_total_cents >= 0 else 'neg' }}">{{ sm.running_total_cents | money }}</div>
+  <div class="muted small">In {{ sm.money_in_cents | money }} · Out {{ sm.money_out_cents | money }}</div>
+</section>
+
+<section class="grid2">
+  <div class="card stat">
+    <div class="label">True starting balance</div>
+    <div class="value">{{ sm.true_start_cents | money }}</div>
+    <details class="small">
+      <summary class="muted">Bank {{ sm.bank_balance_cents | money }}{% if sm.carryover_cents %} · pending {{ sm.carryover_cents | money }}{% endif %} ✎</summary>
+      <form method="post" action="/month/{{ month.id }}/bank-balance">
+        <label for="bank">Bank balance on the 1st</label>
+        <input id="bank" name="amount" type="text" inputmode="decimal" value="{{ sm.bank_balance_cents | input_cents }}">
+        <button class="btn small" type="submit" style="margin-top:6px">Save</button>
+      </form>
+    </details>
+  </div>
+  <div class="card stat">
+    <div class="label">Projected end of month</div>
+    <div class="value {{ 'pos' if sm.projected_end_cents >= 0 else 'neg' }}">{{ sm.projected_end_cents | money }}</div>
+    <div class="muted small">+{{ sm.checks_expected_cents | money }} checks due · −{{ sm.unpaid_bills_cents | money }} unpaid bills</div>
+  </div>
+</section>
+
+{% if sm.targets %}
+<section class="card">
+  {% for t in sm.targets %}
+  <div class="{% if not loop.first %}field{% endif %}">
+    <div class="row"><strong>{{ t.category.name }}</strong>
+      <span class="amt {{ 'warn' if t.over else '' }}">{{ t.remaining_cents | money }} left</span></div>
+    <div class="bar {{ 'over' if t.over }}"><span style="width: {{ t.bar_percent }}%"></span></div>
+    <div class="muted small">of {{ t.target_cents | money }}</div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if sm.next_check %}
+<section class="card">
+  <div class="row"><h2>Next paycheck</h2><a class="small" href="/checks{{ qs }}">All checks →</a></div>
+  <div class="row"><span>{{ sm.next_check.label }} · {{ sm.next_check.pay_date | short_date }}</span>
+    <span class="amt">{{ sm.next_check.amount_cents | money }}</span></div>
+  <div class="muted small">Covers: {% for ln in sm.next_check.lines %}{{ ln.label }}{% if not loop.last %}, {% endif %}{% else %}nothing yet{% endfor %}</div>
+</section>
+{% endif %}
+
+<section class="card flush">
+  <div class="row" style="padding:14px 16px 4px"><h2>Unpaid bills</h2><a class="small" href="/bills{{ qs }}">All bills →</a></div>
+  <ul class="list">
+    {% for b in sm.unpaid_bills %}
+    <li class="row">
+      <span>{{ b.name }}{% if b.assigned_check %} <span class="muted small">· {{ b.assigned_check.label }}</span>{% endif %}</span>
+      <span class="row">
+        <span class="amt">{{ b.amount_cents | money }}</span>
+        {% if not month.locked %}
+        <form method="post" action="/bill/{{ b.id }}/toggle" hx-swap="innerHTML show:none"><button class="btn small" type="submit">Paid</button></form>
+        {% endif %}
+      </span>
+    </li>
+    {% else %}
+    <li class="muted">All bills are paid.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card flush">
+  <div class="row" style="padding:14px 16px 4px"><h2>Pending</h2><a class="small" href="/ledger?pending=1">Ledger →</a></div>
+  <ul class="list">
+    {% for t in sm.pending %}
+    <li class="row">
+      <a href="/txn/{{ t.id }}" class="rowlink" style="flex:1"><span>{{ t.description or "Entry" }} <span class="muted small">{{ t.date | short_date }}</span></span>
+        <span class="amt {{ 'pos' if t.amount_cents > 0 else 'neg' }}">{{ t.amount_cents | money }}</span></a>
+      <form method="post" action="/txn/{{ t.id }}/cleared" hx-swap="innerHTML show:none"><button class="btn small" type="submit">Cleared</button></form>
+    </li>
+    {% else %}
+    <li class="muted">Nothing pending.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<p class="muted small">Card balances: <a href="/cards">{{ card_total | money }}</a> · <a href="/month/new">Start {{ preview.label }}</a></p>
+{% endblock %}

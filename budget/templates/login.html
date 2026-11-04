@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block heading %}Budget{% endblock %}
+{% block content %}
+<form class="card stack" method="post" action="/login" autocomplete="off">
+  <h1>Enter PIN</h1>
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if locked_for %}<p class="neg">Too many wrong tries. Try again in {{ (locked_for / 60) | round(0, 'ceil') | int }} min.</p>{% endif %}
+  <input class="amount-input" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" autofocus required aria-label="PIN">
+  <button class="btn primary block" type="submit">Sign in</button>
+  <p class="muted small">You'll stay signed in on this device.</p>
+</form>
+{% endblock %}

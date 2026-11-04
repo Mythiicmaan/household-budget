@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block heading %}Ledger · {{ month_label(month.year, month.month) }}{% endblock %}
+{% block content %}
+{% include "_month_banner.html" %}
+{% set mq = ("&m=" ~ month.key) if live and month.id != live.id else "" %}
+
+<section class="card">
+  <div class="row">
+    <div class="stat"><div class="label">Running surplus / deficit</div>
+      <div class="value {{ 'pos' if running >= 0 else 'neg' }}">{{ running | money }}</div></div>
+    {% if filter_cat or filter_pending %}
+    <div class="stat right"><div class="label">Filtered</div><div class="value">{{ filtered_total | money }}</div></div>
+    {% endif %}
+  </div>
+</section>
+
+<div class="month-nav">
+  <a href="/ledger?{{ mq[1:] }}" class="{{ 'on' if not filter_cat and not filter_pending }}">All</a>
+  <a href="/ledger?pending=1{{ mq }}" class="{{ 'on' if filter_pending }}">Pending</a>
+  {% for c in all_categories %}
+  <a href="/ledger?cat={{ c.id }}{{ mq }}" class="{{ 'on' if filter_cat == c.id|string }}">{{ c.name }}</a>
+  {% endfor %}
+  <a href="/ledger?cat=uncat{{ mq }}" class="{{ 'on' if filter_cat == 'uncat' }}">Uncategorized</a>
+</div>
+
+<section class="card flush">
+  <ul class="list">
+    {% for t in entries %}
+    <li>
+      <a class="rowlink" href="/txn/{{ t.id }}">
+        <span>
+          {{ t.description or "Entry" }}
+          {% if t.is_outstanding %}<span class="badge pending">pending</span>{% endif %}
+          {% if t.card %}<span class="badge">→ {{ t.card.name }}</span>{% endif %}
+          <br><span class="muted small">{{ t.date | short_date }}{% if t.category %} · {{ t.category.name }}{% endif %}{% if t.source != "manual" %} · {{ t.source }}{% endif %}</span>
+        </span>
+        <span class="amt {{ 'pos' if t.amount_cents > 0 else 'neg' }}">{{ t.amount_cents | money(true) }}</span>
+      </a>
+    </li>
+    {% else %}
+    <li class="muted">No entries{% if filter_cat or filter_pending %} match this filter{% endif %}.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<details class="card">
+  <summary><strong>Other months</strong></summary>
+  <div class="month-nav" style="flex-wrap:wrap">
+    {% for mo in all_months|reverse %}
+    <a href="/ledger?m={{ mo.key }}" class="{{ 'on' if mo.id == month.id }}">{{ mo.key }}</a>
+    {% endfor %}
+  </div>
+</details>
+{% endblock %}

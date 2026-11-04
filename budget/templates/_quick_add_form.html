@@ -1,0 +1,44 @@
+<form method="post" action="/add" data-entry data-once autocomplete="off">
+  <input type="hidden" name="token" value="{{ add_token }}">
+  <div class="segmented" role="radiogroup" aria-label="Direction">
+    <input class="out" type="radio" id="dir-out-{{ add_token[:6] }}" name="direction" value="out" checked>
+    <label for="dir-out-{{ add_token[:6] }}">Money out</label>
+    <input class="in" type="radio" id="dir-in-{{ add_token[:6] }}" name="direction" value="in">
+    <label for="dir-in-{{ add_token[:6] }}">Money in</label>
+  </div>
+  <div class="field">
+    <input class="amount-input" name="amount" type="text" inputmode="decimal" placeholder="0.00"
+           required aria-label="Amount" enterkeyhint="next"{% if autofocus %} autofocus{% endif %}>
+  </div>
+  <div class="field">
+    <input name="description" type="text" list="desc-list" placeholder="What was it? (e.g. store name)"
+           data-desc aria-label="Description" enterkeyhint="done" autocapitalize="words">
+    <datalist id="desc-list">
+      {% for d, _c in qa.descriptions %}<option value="{{ d }}">{% endfor %}
+    </datalist>
+  </div>
+  <div class="field chips" role="radiogroup" aria-label="Category">
+    <input type="radio" id="cat-none-{{ add_token[:6] }}" name="category_id" value="" checked hidden>
+    {% for c in qa.categories %}
+    <input type="radio" id="cat-{{ c.id }}-{{ add_token[:6] }}" name="category_id" value="{{ c.id }}">
+    <label for="cat-{{ c.id }}-{{ add_token[:6] }}">{{ c.name }}</label>
+    {% endfor %}
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label for="date-{{ add_token[:6] }}">Date</label>
+      <input id="date-{{ add_token[:6] }}" name="date" type="date" value="{{ today.isoformat() }}">
+    </div>
+    {% if qa.cards %}
+    <div class="field" data-card-field>
+      <label for="card-{{ add_token[:6] }}">Payment to card →</label>
+      <select id="card-{{ add_token[:6] }}" name="card_id">
+        <option value="">None</option>
+        {% for c in qa.cards %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+  <label class="check"><input type="checkbox" name="pending"> Still pending (hasn't cleared the bank)</label>
+  <button class="btn primary block" type="submit">Save</button>
+</form>

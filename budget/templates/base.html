@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Budget">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "scrollIntoViewOnBoost": false, "historyCacheSize": 0}'>
+  <title>{% block title %}Budget{% endblock %}</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body hx-boost="true">
+  <header class="topbar">
+    <div class="title">{% block heading %}Budget{% endblock %}</div>
+    <div class="small"><a href="/history" hx-boost="false">History</a> · <a href="/settings">Settings</a></div>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if toast %}
+  <div class="toast{% if toast.error %} error{% endif %}" role="status">
+    <span>{{ toast.msg }}</span>
+    {% if toast.undo %}
+    <form method="post" action="{{ toast.undo }}" hx-swap="innerHTML show:none"><button class="linkbtn" type="submit">Undo</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if live and qa is defined and nav not in ("add", "login") %}
+  <a class="fab" href="/add" hx-boost="false" data-open-add aria-label="Add entry">+</a>
+  <dialog class="sheet" id="quick-add" aria-label="Add entry">
+    <div class="inner">
+      <div class="row"><h2>Add entry</h2><button class="linkbtn" type="button" data-close-add>Close</button></div>
+      {% include "_quick_add_form.html" %}
+    </div>
+  </dialog>
+  {% endif %}
+
+  {% if nav != "login" %}
+  <nav class="nav">
+    <a href="/" class="{{ 'on' if nav == 'dashboard' }}"><span class="ico">◉</span>Home</a>
+    <a href="/ledger" class="{{ 'on' if nav in ('ledger', 'txn_edit') }}"><span class="ico">≡</span>Ledger</a>
+    <a href="/bills" class="{{ 'on' if nav == 'bills' }}"><span class="ico">✓</span>Bills</a>
+    <a href="/checks" class="{{ 'on' if nav == 'checks' }}"><span class="ico">$</span>Checks</a>
+    <a href="/cards" class="{{ 'on' if nav == 'cards' }}"><span class="ico">▭</span>Cards</a>
+  </nav>
+  {% endif %}
+  {% if qa is defined %}<script type="application/json" id="desc-map">{{ qa.desc_map | safe }}</script>{% endif %}
+</body>
+</html>

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block heading %}Edit entry{% endblock %}
+{% block content %}
+{% include "_month_banner.html" %}
+<form class="card" method="post" action="/txn/{{ txn.id }}" data-entry data-once>
+  <div class="segmented">
+    <input class="out" type="radio" id="e-out" name="direction" value="out" {{ 'checked' if txn.amount_cents < 0 }}>
+    <label for="e-out">Money out</label>
+    <input class="in" type="radio" id="e-in" name="direction" value="in" {{ 'checked' if txn.amount_cents >= 0 }}>
+    <label for="e-in">Money in</label>
+  </div>
+  <div class="field">
+    <input class="amount-input" name="amount" type="text" inputmode="decimal" value="{{ (txn.amount_cents|abs) | input_cents }}" aria-label="Amount">
+  </div>
+  <div class="field"><label for="e-desc">Description</label>
+    <input id="e-desc" name="description" type="text" value="{{ txn.description }}"></div>
+  <div class="field chips">
+    <input type="radio" id="e-cat-none" name="category_id" value="" {{ 'checked' if not txn.category_id }}>
+    <label for="e-cat-none">None</label>
+    {% for c in all_categories %}
+    <input type="radio" id="e-cat-{{ c.id }}" name="category_id" value="{{ c.id }}" {{ 'checked' if txn.category_id == c.id }}>
+    <label for="e-cat-{{ c.id }}">{{ c.name }}</label>
+    {% endfor %}
+  </div>
+  <div class="grid2">
+    <div class="field"><label for="e-date">Date</label>
+      <input id="e-date" name="date" type="date" value="{{ txn.date.isoformat() }}"></div>
+    <div class="field" data-card-field><label for="e-card">Payment to card →</label>
+      <select id="e-card" name="card_id">
+        <option value="">None</option>
+        {% for c in all_cards %}<option value="{{ c.id }}" {{ 'selected' if txn.card_id == c.id }}>{{ c.name }}</option>{% endfor %}
+        {% if txn.card and txn.card.archived %}<option value="{{ txn.card.id }}" selected>{{ txn.card.name }} (archived)</option>{% endif %}
+      </select></div>
+  </div>
+  <label class="check"><input type="checkbox" name="pending" {{ 'checked' if txn.pending }}> Pending</label>
+  {% if txn.pending %}
+  <label class="check"><input type="checkbox" name="cleared" {{ 'checked' if txn.cleared_date }}> Cleared{% if txn.cleared_date %} ({{ txn.cleared_date | short_date }}){% endif %}</label>
+  {% endif %}
+  <div class="field"><label for="e-note">Note</label>
+    <input id="e-note" name="note" type="text" value="{{ txn.note }}"></div>
+  {% if links.bill %}<p class="muted small">Created by paying the bill <strong>{{ links.bill.name }}</strong>.</p>{% endif %}
+  {% if links.paycheck %}<p class="muted small">Created by receiving <strong>{{ links.paycheck.label }}</strong>.</p>{% endif %}
+  {% if not month.locked %}<button class="btn primary block" type="submit">Save</button>{% endif %}
+</form>
+
+{% if not month.locked %}
+<form method="post" action="/txn/{{ txn.id }}/delete"
+  {% if links.bill %}hx-confirm="This entry paid the bill '{{ links.bill.name }}'. Deleting it will mark that bill unpaid. Continue?"
+  {% elif links.paycheck %}hx-confirm="This entry is the paycheck '{{ links.paycheck.label }}'. Deleting it will mark the check not received. Continue?"{% endif %}>
+  <button class="btn danger block" type="submit">Delete entry</button>
+</form>
+{% endif %}
+{% endblock %}

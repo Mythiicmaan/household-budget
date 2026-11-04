@@ -1,0 +1,19 @@
+{% if month and (month.locked or (live and month.id != live.id)) %}
+<div class="banner locked row">
+  <span>{% if live and month.id != live.id %}Viewing {{ month_label(month.year, month.month) }}{% else %}This month{% endif %}{% if month.locked %} · read-only{% endif %}</span>
+  <span>
+    {% if month.locked %}
+    <form method="post" action="/month/{{ month.id }}/lock" style="display:inline" hx-swap="innerHTML show:none">
+      <input type="hidden" name="locked" value="">
+      <button class="linkbtn" type="submit" hx-confirm="Unlock {{ month_label(month.year, month.month) }} for editing?">Unlock</button>
+    </form>
+    {% elif live and month.id != live.id %}
+    <form method="post" action="/month/{{ month.id }}/lock" style="display:inline" hx-swap="innerHTML show:none">
+      <input type="hidden" name="locked" value="on">
+      <button class="linkbtn" type="submit">Lock</button>
+    </form>
+    {% endif %}
+    {% if live and month.id != live.id %} · <a href="{{ request.url.path }}">Back to {{ month_label(live.year, live.month) }}</a>{% endif %}
+  </span>
+</div>
+{% endif %}

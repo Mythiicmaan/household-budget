@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block heading %}Start {{ preview.label }}{% endblock %}
+{% block content %}
+<form class="card stack" method="post" action="/month/new" data-new-month data-once>
+  <input type="hidden" name="ym" value="{{ preview.year }}-{{ preview.month }}">
+  <p>This copies the bill list forward with {% if preview.previous %}{{ month_label(preview.previous.year, preview.previous.month) }}'s{% else %}the template's{% endif %} amounts (all unpaid),
+    builds this month's paychecks from the pay schedules{% if preview.previous %}, and locks {{ month_label(preview.previous.year, preview.previous.month) }}{% endif %}.</p>
+
+  {% if preview.outstanding %}
+  <div>
+    <h2>Has this cleared yet?</h2>
+    <p class="muted small">Tick anything that has cleared the bank. Unticked items carry over as pending.</p>
+    {% for t in preview.outstanding %}
+    <label class="check"><input type="checkbox" name="cleared" value="{{ t.id }}" data-amount="{{ t.amount_cents / 100 }}">
+      {{ t.description or "Entry" }} · {{ t.date | short_date }} · <span class="amt">{{ t.amount_cents | money }}</span></label>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div>
+    <label for="bank_balance">Today's bank balance ({{ account_name }})</label>
+    <input id="bank_balance" name="bank_balance" type="text" inputmode="decimal" placeholder="0.00">
+  </div>
+  <div class="row"><span>True starting balance</span><strong class="amt" data-true-start>—</strong></div>
+  <p class="muted small">= bank balance minus anything still pending. You can fill the balance in later from the dashboard.</p>
+  <button class="btn primary block" type="submit">Start {{ preview.label }}</button>
+</form>
+{% endblock %}

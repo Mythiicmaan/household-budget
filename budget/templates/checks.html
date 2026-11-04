@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block heading %}Checks · {{ month_label(month.year, month.month) }}{% endblock %}
+{% block content %}
+{% include "_month_banner.html" %}
+
+<section class="card row">
+  <div class="stat"><div class="label">Checks this month</div><div class="value">{{ total_in | money }}</div></div>
+  <div class="stat right"><div class="label">Total to {{ account_name }}</div><div class="value">{{ total_remainder | money }}</div></div>
+</section>
+
+{% for c in checks %}
+<section class="card check-card">
+  <h2>
+    <span>{{ c.label }}{% if c.is_one_off %} <span class="badge">one-off</span>{% endif %}</span>
+    <span class="muted small">{{ c.pay_date | short_date }}</span>
+  </h2>
+  <div class="row">
+    <span class="amt">{{ c.amount_cents | money }}</span>
+    {% if not month.locked %}
+    <form method="post" action="/check/{{ c.id }}/toggle" hx-swap="innerHTML show:none">
+      <button class="btn small {{ 'primary' if not c.received }}" type="submit">{{ 'Received ✓' if c.received else 'Mark received' }}</button>
+    </form>
+    {% elif c.received %}<span class="badge paid">received</span>{% endif %}
+  </div>
+
+  <form method="post" action="/check/{{ c.id }}" data-check-form data-once hx-swap="innerHTML show:none">
+    <details>
+      <summary class="small muted">Edit check ✎</summary>
+      <div class="inline">
+        <div><label>Name</label><input name="label" type="text" value="{{ c.label }}"></div>
+        <div class="shrink" style="width:140px"><label>Date</label><input name="pay_date" type="date" value="{{ c.pay_date.isoformat() }}"></div>
+      </div>
+    </details>
+    <div class="field"><label>Check amount</label>
+      <input name="amount" type="text" inputmode="decimal" value="{{ c.amount_cents | input_cents }}"></div>
+    {% for ln in c.lines %}
+    <div class="line-row" data-line>
+      <input type="text" name="line-{{ ln.id }}-label" value="{{ ln.label }}" aria-label="Line label">
+      <input type="text" inputmode="decimal" data-amt name="line-{{ ln.id }}-amount" value="{{ (ln.amount_cents|abs) | input_cents }}" aria-label="Line amount">
+      <input class="del" type="checkbox" name="line-{{ ln.id }}-delete" title="Remove line" aria-label="Remove {{ ln.label }}">
+    </div>
+    {% endfor %}
+    {% if not month.locked %}
+    <details>
+      <summary class="small">+ Add a line</summary>
+      <div class="line-row">
+        <input type="text" name="new-label" placeholder="e.g. Savings">
+        <input type="text" inputmode="decimal" name="new-amount" placeholder="0.00">
+        <span></span>
+      </div>
+      <select name="new-kind">{% for k in line_kinds %}<option value="{{ k }}">{{ k.replace('_', ' ') }}</option>{% endfor %}</select>
+    </details>
+    {% endif %}
+    <div class="row field">
+      <span>Remainder → {{ account_name }}</span>
+      <span class="remainder amt {{ 'neg' if remainders[c.id] < 0 }}" data-remainder>{{ remainders[c.id] | money }}</span>
+    </div>
+    {% if not month.locked %}
+    <div class="row">
+      <button class="btn primary" type="submit">Save</button>
+      <span class="muted small">☐ = remove line. Bill lines also change the bill.</span>
+    </div>
+    {% endif %}
+  </form>
+  {% if c.is_one_off and not month.locked %}
+  <form method="post" action="/check/{{ c.id }}/delete" hx-confirm="Remove {{ c.label }}?" style="margin-top:8px">
+    <button class="btn danger small" type="submit">Remove one-off check</button>
+  </form>
+  {% endif %}
+</section>
+{% else %}
+<div class="card muted">No checks this month. Set pay schedules in <a href="/settings#people">Settings</a>.</div>
+{% endfor %}
+
+{% if not month.locked %}
+<details class="card">
+  <summary><strong>+ Add one-off check</strong> <span class="muted small">(bonus, refund…)</span></summary>
+  <form method="post" action="/checks/{{ month.id }}/one-off" class="stack">
+    <div><label>Name</label><input name="label" type="text" required placeholder="e.g. Holiday bonus"></div>
+    <div class="grid2">
+      <div><label>Amount</label><input name="amount" type="text" inputmode="decimal" required></div>
+      <div><label>Date</label><input name="pay_date" type="date" value="{{ today.isoformat() }}" required></div>
+    </div>
+    <div><label>Whose</label>
+      <select name="person_id"><option value="">—</option>{% for p in people %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></div>
+    <button class="btn primary" type="submit">Add check</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}

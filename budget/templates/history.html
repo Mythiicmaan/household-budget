@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block heading %}History{% endblock %}
+{% block head %}<script src="/static/vendor/chart.umd.min.js" defer></script>{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Money in vs. out</h2>
+  <div class="chart-box"><canvas id="history-chart" aria-label="Money in and out by month"></canvas></div>
+  <script type="application/json" id="chart-data">{{ chart_json | safe }}</script>
+</section>
+<section class="card flush">
+  <table class="simple">
+    <thead><tr><th>Month</th><th class="amt">In</th><th class="amt">Out</th><th class="amt">Net</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a href="/?m={{ r.key }}">{{ r.label }}</a></td>
+        <td class="amt">{{ r.money_in_cents | money }}</td>
+        <td class="amt">{{ r.money_out_cents | money }}</td>
+        <td class="amt {{ 'pos' if r.net_cents >= 0 else 'neg' }}">{{ r.net_cents | money }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No months yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

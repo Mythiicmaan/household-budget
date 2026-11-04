@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block heading %}Welcome{% endblock %}
+{% block content %}
+<div class="card stack">
+  <h1>No months yet</h1>
+  <p>Start your first month to generate paychecks and bills from Settings, or run the spreadsheet importer.</p>
+  <a class="btn primary block" href="/month/new">Start {{ preview.label }}</a>
+  <a class="btn block" href="/settings">Settings</a>
+</div>
+{% endblock %}
