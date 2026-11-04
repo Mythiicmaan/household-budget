@@ -41,11 +41,11 @@ extend-exclude = ["budget/static"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
-ignore = ["S101", "B008"]
+ignore = ["S101", "B008", "E501"]  # line length is enforced by ruff format
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S105", "S106"]
-"budget/migrations/**" = ["E501"]
+"budget/migrations/**" = ["W291"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
