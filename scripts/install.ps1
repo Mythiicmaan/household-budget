@@ -97,7 +97,7 @@ if ($user) {
     if ((ConvertTo-Plain $secure) -cne (ConvertTo-Plain $again)) { Stop-Install 'The two passwords did not match.' }
     if ((ConvertTo-Plain $secure).Length -lt 12) { Stop-Install 'Please use at least 12 characters.' }
     New-LocalUser -Name $ServiceUser -Password $secure -FullName 'Household Budget service' `
-        -Description 'Runs the Household Budget app. Not an administrator.' `
+        -Description 'Runs the Household Budget app (not an admin)' `
         -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires | Out-Null
     Ok "Created account '$ServiceUser'"
 }
