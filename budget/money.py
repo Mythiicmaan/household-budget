@@ -64,12 +64,14 @@ def format_cents(cents: int, *, sign: bool = False) -> str:
 
 
 def cents_to_input(cents: int | None) -> str:
-    """Render cents for an editable input field ("12.50"), no symbols."""
+    """Render cents for an editable input field, no symbols: "2500" for whole dollars,
+    "12.50" when there are cents."""
     if cents is None:
         return ""
     neg = cents < 0
     whole, frac = divmod(abs(int(cents)), 100)
-    return ("-" if neg else "") + f"{whole}.{frac:02d}"
+    body = f"{whole}" if frac == 0 else f"{whole}.{frac:02d}"
+    return ("-" if neg else "") + body
 
 
 # --------------------------------------------------------------------------

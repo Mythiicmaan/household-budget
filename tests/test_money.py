@@ -79,3 +79,11 @@ def test_cents_to_input_round_trips():
     for c in (0, 1, 99, 100, -250, 123456):
         assert parse_money(cents_to_input(c)) == c
     assert cents_to_input(None) == ""
+
+
+def test_cents_to_input_drops_zero_cents():
+    assert cents_to_input(250000) == "2500"
+    assert cents_to_input(250050) == "2500.50"
+    assert cents_to_input(5) == "0.05"
+    assert cents_to_input(-2500) == "-25"
+    assert cents_to_input(0) == "0"
