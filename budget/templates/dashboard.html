@@ -28,9 +28,19 @@
     </details>
   </div>
   <div class="card stat">
-    <div class="label">Projected end of month</div>
+    <div class="label">End of month, once everything's paid</div>
     <div class="value {{ 'pos' if sm.projected_end_cents >= 0 else 'neg' }}">{{ sm.projected_end_cents | money }}</div>
-    <div class="muted small">+{{ sm.checks_expected_cents | money }} checks due · −{{ sm.unpaid_bills_cents | money }} unpaid bills</div>
+    <details class="small">
+      <summary class="muted">How this adds up ▾</summary>
+      <table class="simple">
+        <tr><td>True starting balance</td><td class="amt">{{ sm.true_start_cents | money }}</td></tr>
+        <tr><td>Entered so far</td><td class="amt">{{ sm.running_total_cents | money(true) }}</td></tr>
+        <tr><td>Checks still coming</td><td class="amt">+{{ sm.checks_expected_cents | money }}</td></tr>
+        <tr><td>Bills not paid yet</td><td class="amt">-{{ sm.unpaid_bills_cents | money }}</td></tr>
+        <tr><td>Check items not paid yet</td><td class="amt">-{{ sm.unpaid_lines_cents | money }}</td></tr>
+        <tr><td>Left in gas &amp; grocery budgets</td><td class="amt">-{{ sm.budget_left_cents | money }}</td></tr>
+      </table>
+    </details>
   </div>
 </section>
 
@@ -57,20 +67,20 @@
 {% endif %}
 
 <section class="card flush">
-  <div class="row" style="padding:14px 16px 4px"><h2>Unpaid bills</h2><a class="small" href="/bills{{ qs }}">All bills →</a></div>
+  <div class="row" style="padding:14px 16px 4px"><h2>Still to pay this month</h2><a class="small" href="/checks{{ qs }}">Checks →</a></div>
   <ul class="list">
-    {% for b in sm.unpaid_bills %}
+    {% for item in sm.to_pay %}
     <li class="row">
-      <span>{{ b.name }}{% if b.assigned_check %} <span class="muted small">· {{ b.assigned_check.label }}</span>{% endif %}</span>
+      <span>{{ item.label }}<br><span class="muted small">{% if item.when %}{{ item.when | short_date }}{% endif %}{% if item.check_label %} · {{ item.check_label }}{% endif %}{% if item.kind == "bill" %} · bill{% endif %}</span></span>
       <span class="row">
-        <span class="amt">{{ b.amount_cents | money }}</span>
+        <span class="amt">{{ item.amount_cents | money }}</span>
         {% if not month.locked %}
-        <form method="post" action="/bill/{{ b.id }}/toggle" hx-swap="innerHTML show:none"><button class="btn small" type="submit">Paid</button></form>
+        <form method="post" action="/{{ 'bill' if item.kind == 'bill' else 'line' }}/{{ item.id }}/toggle" hx-swap="innerHTML show:none"><button class="btn small" type="submit">Mark paid</button></form>
         {% endif %}
       </span>
     </li>
     {% else %}
-    <li class="muted">All bills are paid.</li>
+    <li class="muted">Everything planned for this month is paid.</li>
     {% endfor %}
   </ul>
 </section>

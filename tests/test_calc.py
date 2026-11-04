@@ -30,6 +30,26 @@ def test_projected_end_balance_without_start():
     assert calc.projected_end_balance(None, 1000, [], [500]) == 500
 
 
+def test_projected_end_subtracts_planned_check_items_and_budget_left():
+    # start 900 + running -50 + checks due 2000 - bills 300
+    # - planned check items not yet paid (childcare 100, card payment 250, as negative lines)
+    # - what's left of soft budgets (gas 80 left, groceries 400 left)
+    got = calc.projected_end_balance(
+        90000,
+        -5000,
+        [200000],
+        [30000],
+        unpaid_line_amounts=[-10000, -25000],
+        budget_left=[8000, 40000],
+    )
+    assert got == 90000 - 5000 + 200000 - 30000 - 10000 - 25000 - 8000 - 40000
+
+
+def test_budget_left_ignores_overspent_categories():
+    # An over-budget category (negative remaining) is already in the running total.
+    assert calc.budget_left([8000, -4000, 0]) == [8000, 0, 0]
+
+
 def test_category_remaining_positive_and_negative():
     assert calc.category_remaining(60000, [-10000, -2550]) == 47450
     # Over budget: remaining goes negative, never clamps.

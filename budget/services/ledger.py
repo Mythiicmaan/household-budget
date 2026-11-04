@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from budget.models import Card, Month, MonthBill, Paycheck, Txn
+from budget.models import Card, Month, MonthBill, Paycheck, PaycheckLine, Txn
 from budget.services import cards as card_svc
 from budget.services.common import BudgetError, ensure_editable, utcnow
 
@@ -125,12 +125,14 @@ def update_txn(
 class Links:
     bill: MonthBill | None
     paycheck: Paycheck | None
+    line: PaycheckLine | None = None
 
 
 def links_for(s: Session, txn: Txn) -> Links:
     bill = s.scalar(select(MonthBill).where(MonthBill.paid_txn_id == txn.id))
     check = s.scalar(select(Paycheck).where(Paycheck.received_txn_id == txn.id))
-    return Links(bill=bill, paycheck=check)
+    line = s.scalar(select(PaycheckLine).where(PaycheckLine.paid_txn_id == txn.id))
+    return Links(bill=bill, paycheck=check, line=line)
 
 
 def delete_txn(s: Session, txn: Txn, *, check_locked: bool = True) -> Links:
@@ -149,6 +151,8 @@ def delete_txn(s: Session, txn: Txn, *, check_locked: bool = True) -> Links:
         links.bill.paid = False
     if links.paycheck:
         links.paycheck.received = False
+    if links.line:
+        links.line.paid = False
     return links
 
 
@@ -166,6 +170,8 @@ def restore_txn(s: Session, txn: Txn) -> Links:
         links.bill.paid = True
     if links.paycheck:
         links.paycheck.received = True
+    if links.line:
+        links.line.paid = True
     return links
 
 

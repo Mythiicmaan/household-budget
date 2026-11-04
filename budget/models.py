@@ -139,8 +139,21 @@ class PaycheckLine(Base):
         ForeignKey("card.id", ondelete="SET NULL"), nullable=True
     )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # Planned items (childcare, card payments, savings...) are ticked off when they happen,
+    # which creates their ledger entry. Bill lines use the bill's own paid flag instead,
+    # and grocery lines are tracked through the Groceries budget.
+    paid: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    paid_txn_id: Mapped[int | None] = mapped_column(
+        ForeignKey("txn.id", ondelete="SET NULL", name="fk_paycheck_line_paid_txn"), nullable=True
+    )
 
     paycheck: Mapped[Paycheck] = relationship(back_populates="lines")
+
+    @property
+    def trackable(self) -> bool:
+        """Has its own Paid toggle (not a bill line, not a grocery budget line)."""
+        return self.kind not in ("bill", "groceries")
+
     month_bill: Mapped[MonthBill | None] = relationship()
 
 

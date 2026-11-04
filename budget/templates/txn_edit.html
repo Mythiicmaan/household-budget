@@ -40,13 +40,15 @@
     <input id="e-note" name="note" type="text" value="{{ txn.note }}"></div>
   {% if links.bill %}<p class="muted small">Created by paying the bill <strong>{{ links.bill.name }}</strong>.</p>{% endif %}
   {% if links.paycheck %}<p class="muted small">Created by receiving <strong>{{ links.paycheck.label }}</strong>.</p>{% endif %}
+  {% if links.line %}<p class="muted small">Created by paying <strong>{{ links.line.label }}</strong> on {{ links.line.paycheck.label }}.</p>{% endif %}
   {% if not month.locked %}<button class="btn primary block" type="submit">Save</button>{% endif %}
 </form>
 
 {% if not month.locked %}
 <form method="post" action="/txn/{{ txn.id }}/delete"
   {% if links.bill %}hx-confirm="This entry paid the bill '{{ links.bill.name }}'. Deleting it will mark that bill unpaid. Continue?"
-  {% elif links.paycheck %}hx-confirm="This entry is the paycheck '{{ links.paycheck.label }}'. Deleting it will mark the check not received. Continue?"{% endif %}>
+  {% elif links.paycheck %}hx-confirm="This entry is the paycheck '{{ links.paycheck.label }}'. Deleting it will mark the check not received. Continue?"
+  {% elif links.line %}hx-confirm="This entry paid '{{ links.line.label }}' on {{ links.line.paycheck.label }}. Deleting it will mark that item not paid. Continue?"{% endif %}>
   <button class="btn danger block" type="submit">Delete entry</button>
 </form>
 {% endif %}

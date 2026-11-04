@@ -49,6 +49,21 @@ class MonthSummary:
     pending: list[Txn] = field(default_factory=list)
     checks_expected_cents: int = 0
     unpaid_bills_cents: int = 0
+    unpaid_lines_cents: int = 0  # positive size of planned check items not yet paid
+    budget_left_cents: int = 0  # what's still left to spend in soft budgets
+    to_pay: list[ToPay] = field(default_factory=list)
+
+
+@dataclass
+class ToPay:
+    """One thing still planned for the month: an unpaid bill or check item."""
+
+    kind: str  # "bill" or "line"
+    id: int
+    label: str
+    amount_cents: int  # positive
+    when: date | None
+    check_label: str
 
 
 def month_summary(s: Session, month: Month, today: date | None = None) -> MonthSummary:
@@ -63,9 +78,7 @@ def month_summary(s: Session, month: Month, today: date | None = None) -> MonthS
     expected = [c.amount_cents for c in checks if not c.received]
     bills = bill_svc.bills_in_month(s, month)
     unpaid = [b for b in bills if not b.paid]
-    projected = calc.projected_end_balance(
-        true_start, running, expected, [b.amount_cents for b in unpaid]
-    )
+    open_lines = paychecks.unpaid_planned_lines(checks)
 
     targets = []
     cats = s.scalars(
@@ -85,6 +98,38 @@ def month_summary(s: Session, month: Month, today: date | None = None) -> MonthS
                 fraction=calc.category_spent_fraction(cat.monthly_target_cents, rem),
             )
         )
+
+    left = calc.budget_left(t.remaining_cents for t in targets)
+    projected = calc.projected_end_balance(
+        true_start,
+        running,
+        expected,
+        [b.amount_cents for b in unpaid],
+        unpaid_line_amounts=[ln.amount_cents for ln in open_lines],
+        budget_left=left,
+    )
+    to_pay = [
+        ToPay(
+            "bill",
+            b.id,
+            b.name,
+            b.amount_cents,
+            b.assigned_check.pay_date if b.assigned_check else None,
+            b.assigned_check.label if b.assigned_check else "",
+        )
+        for b in unpaid
+    ] + [
+        ToPay(
+            "line",
+            ln.id,
+            ln.label,
+            -ln.amount_cents,
+            ln.line_date or ln.paycheck.pay_date,
+            ln.paycheck.label,
+        )
+        for ln in open_lines
+    ]
+    to_pay.sort(key=lambda x: (x.when or date.max, x.kind, x.label))
 
     upcoming = [c for c in checks if not c.received and c.pay_date >= today]
     not_received = [c for c in checks if not c.received]
@@ -106,6 +151,9 @@ def month_summary(s: Session, month: Month, today: date | None = None) -> MonthS
         pending=ledger.outstanding_pending(s, month),
         checks_expected_cents=sum(expected),
         unpaid_bills_cents=sum(b.amount_cents for b in unpaid),
+        unpaid_lines_cents=-sum(ln.amount_cents for ln in open_lines),
+        budget_left_cents=sum(left),
+        to_pay=to_pay,
     )
 
 

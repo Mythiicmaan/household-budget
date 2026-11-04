@@ -23,6 +23,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -97,10 +98,19 @@ def date_in_text(text: str) -> date | None:
     return None
 
 
-def norm_tokens(text: str) -> set[str]:
+def token_list(text: str) -> list[str]:
     stop = {"and", "the", "bill", "monthly", "qtrly", "of", "x", "payment"}
     words = re.findall(r"[a-z0-9]+", (text or "").lower())
-    return {w for w in words if w not in stop and not w.isdigit() and w not in MONTH_NAMES}
+    return [w for w in words if w not in stop and not w.isdigit() and w not in MONTH_NAMES]
+
+
+def norm_tokens(text: str) -> set[str]:
+    return set(token_list(text))
+
+
+def tokens_similar(a: str, b: str) -> bool:
+    """'book' ~ 'books', 'elect' ~ 'electric' (shared start of at least 4 letters)."""
+    return a == b or (min(len(a), len(b)) >= 4 and (a.startswith(b) or b.startswith(a)))
 
 
 def squash(text: str) -> str:
@@ -450,13 +460,84 @@ def _match_person(hint: str, people: list[Person]) -> Person | None:
 
 
 def _names_match(a: str, b: str) -> bool:
-    ta, tb = norm_tokens(a), norm_tokens(b)
-    if not ta or not tb:
+    la, lb = token_list(a), token_list(b)
+    if not la or not lb:
         return False
-    sa, sb = squash(a), squash(b)
-    if sa == sb or sa.startswith(sb) or sb.startswith(sa):
+    ja, jb = "".join(la), "".join(lb)
+    if ja.startswith(jb) or jb.startswith(ja):  # "StreamBox" ~ "Stream Box Extra"
         return True
-    return ta <= tb or tb <= ta
+    small, large = (la, lb) if len(la) <= len(lb) else (lb, la)
+    return all(any(tokens_similar(x, y) for y in large) for x in small)
+
+
+def _shares_token(a: str, b: str) -> bool:
+    return any(tokens_similar(x, y) for x in token_list(a) for y in token_list(b))
+
+
+def link_bill_lines(check: Paycheck, bills: list[MonthBill]) -> dict[int, str]:
+    """Connect a check's lines to the bills assigned to it. Returns bill id -> how.
+
+    1. One line per bill when the names match and the amounts are within 10%.
+    2. One combined line covering several bills ("A, B, C") when those bills' amounts add
+       up to the line exactly: the line is split into one line per bill (same total).
+    Anything else is left as it is on the sheet, so the check's remainder never changes.
+    """
+    how: dict[int, str] = {}
+    open_bills = [b for b in bills if b.assigned_check_id == check.id]
+    for b in open_bills:
+        line = next(
+            (
+                ln
+                for ln in check.lines
+                if ln.month_bill_id is None
+                and ln.kind not in ("groceries", "daycare")
+                and _names_match(ln.label, b.name)
+                and _close(ln.amount_cents, b.amount_cents)
+            ),
+            None,
+        )
+        if line:
+            line.kind = "bill"
+            line.month_bill_id = b.id
+            how[b.id] = "line linked" + (
+                ""
+                if -line.amount_cents == b.amount_cents
+                else f" (check line {_fmt(-line.amount_cents)})"
+            )
+    left = [b for b in open_bills if b.id not in how]
+    for line in list(check.lines):
+        if line.month_bill_id is not None or line.kind in ("groceries", "daycare") or not left:
+            continue
+        candidates = [b for b in left if _shares_token(line.label, b.name)]
+        for size in range(2, min(5, len(candidates)) + 1):
+            combo = next(
+                (
+                    c
+                    for c in combinations(candidates, size)
+                    if sum(b.amount_cents for b in c) == -line.amount_cents
+                ),
+                None,
+            )
+            if combo:
+                pos = check.lines.index(line)
+                check.lines.remove(line)
+                for i, b in enumerate(combo):
+                    check.lines.insert(
+                        pos + i,
+                        PaycheckLine(
+                            kind="bill",
+                            label=b.name,
+                            amount_cents=-b.amount_cents,
+                            month_bill_id=b.id,
+                            sort_order=line.sort_order,
+                        ),
+                    )
+                    how[b.id] = f"split out of the combined line {line.label!r}"
+                left = [b for b in left if b.id not in how]
+                break
+    for b in left:
+        how[b.id] = "no matching line on the check; check lines kept as on the sheet"
+    return how
 
 
 def _close(a: int, b: int, pct: float = 0.10) -> bool:
@@ -633,6 +714,7 @@ def _import_live(
 
     # Bills, the bill template, and which check pays each bill.
     bills_cat = cats.get(bills_category.lower())
+    bill_notes: list[tuple[MonthBill, str]] = []
     for i, b in enumerate(tab.bills):
         person = _match_person(b.person_hint, plist) if b.person_hint else None
         tpl = BillTemplate(
@@ -671,23 +753,6 @@ def _import_live(
             else:
                 bill.assigned_check_id = match.id
                 where = match.label
-                line = next(
-                    (
-                        ln
-                        for ln in match.lines
-                        if ln.month_bill_id is None
-                        and ln.kind not in ("groceries", "daycare")
-                        and _names_match(ln.label, b.name)
-                        and _close(ln.amount_cents, b.cents)
-                    ),
-                    None,
-                )
-                if line:
-                    line.kind = "bill"
-                    line.month_bill_id = bill.id
-                    where += " (line linked)"
-                else:
-                    where += " (no single matching line on the check; check lines kept as-is)"
         # Already paid? Either the sheet says so, or a ledger entry matches it exactly.
         paid_txn = next(
             (
@@ -709,8 +774,19 @@ def _import_live(
         elif b.paid:
             bill.paid = True
             where += "; marked paid on the sheet (no matching ledger entry)"
-        report.append(f"  Bill {b.name} {_fmt(b.cents)} -> {where}")
+        bill_notes.append((bill, where))
     s.flush()
+    linked: dict[int, str] = {}
+    for _blk, check in checks:
+        linked.update(link_bill_lines(check, [b for b, _ in bill_notes]))
+    s.flush()
+    for bill, where in bill_notes:
+        extra = f" ({linked[bill.id]})" if bill.id in linked else ""
+        head, _, tail = where.partition(";")
+        report.append(
+            f"  Bill {bill.name} {_fmt(bill.amount_cents)} -> {head}{extra}"
+            + (f";{tail}" if tail else "")
+        )
 
     # Checks already received show up as positive ledger entries.
     for block, check in checks:

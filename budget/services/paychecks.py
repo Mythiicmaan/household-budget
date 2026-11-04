@@ -241,6 +241,55 @@ def update_line(
         line.label = label.strip()
     if amount_cents is not None:
         line.amount_cents = amount_cents
+    if line.paid and line.paid_txn_id:
+        txn = s.get(Txn, line.paid_txn_id)
+        if txn and txn.deleted_at is None:
+            ledger.update_txn(s, txn, amount_cents=line.amount_cents, description=line.label)
+
+
+def mark_line_paid(s: Session, line: PaycheckLine, paid_on: date | None = None) -> Txn:
+    """Tick off a planned check item (childcare, card payment, savings...): creates its
+    ledger entry. Childcare is usually paid by paper check, so it starts out pending."""
+    check = line.paycheck
+    month = s.get(Month, check.month_id)
+    ensure_editable(month)
+    if not line.trackable:
+        raise BudgetError("Bills are marked paid on the Bills page; groceries use the budget.")
+    if line.paid_txn_id:
+        txn = s.get(Txn, line.paid_txn_id)
+        if txn and txn.deleted_at is None:
+            line.paid = True
+            return txn
+        if txn:  # un-ticked earlier: bring the same entry back
+            ledger.restore_txn(s, txn)
+            ledger.update_txn(s, txn, amount_cents=line.amount_cents, description=line.label)
+            return txn
+    txn = ledger.add_txn(
+        s,
+        month=month,
+        date_=paid_on or line.line_date or check.pay_date,
+        amount_cents=line.amount_cents,
+        description=line.label,
+        pending=line.kind == "daycare",
+        source="paycheck",
+    )
+    line.paid = True
+    line.paid_txn_id = txn.id
+    return txn
+
+
+def mark_line_unpaid(s: Session, line: PaycheckLine) -> None:
+    ensure_editable(s.get(Month, line.paycheck.month_id))
+    if line.paid_txn_id:
+        txn = s.get(Txn, line.paid_txn_id)
+        if txn:
+            ledger.delete_txn(s, txn)
+    line.paid = False
+
+
+def unpaid_planned_lines(checks: list[Paycheck]) -> list[PaycheckLine]:
+    """Planned check items that haven't happened yet (for the projection)."""
+    return [ln for c in checks for ln in c.lines if ln.trackable and not ln.paid]
 
 
 def delete_line(s: Session, line: PaycheckLine) -> None:

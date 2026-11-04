@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from budget import calc
-from budget.models import BillTemplate, Month, MonthBill, PendingCarryover, Txn
+from budget.models import BillTemplate, Month, MonthBill, PaycheckLine, PendingCarryover, Txn
 from budget.schedule import month_label, next_month, prev_month
 from budget.services import ledger, paychecks
 from budget.services.common import BudgetError, get_month, live_month, utcnow
@@ -78,6 +78,8 @@ def start_month(
     s.flush()
 
     checks = paychecks.generate_regular_checks(s, new)
+    if prev:
+        _copy_recurring_lines(s, prev, checks)
     _copy_bills(s, prev, new, checks)
 
     # Pending carryover: anything not yet cleared from earlier months.
@@ -98,6 +100,37 @@ def start_month(
         prev.locked = True
     s.flush()
     return new
+
+
+COPY_FORWARD_KINDS = ("card_payment", "savings", "other")
+
+
+def _copy_recurring_lines(s: Session, prev: Month, checks) -> None:
+    """Carry each check's own items (savings, card payments, other transfers) forward from
+    last month's matching check (same person, same 1st/2nd/3rd check), unpaid.
+    Bills come from the template and weekly lines from Settings, so those aren't copied."""
+    prev_checks = {
+        (c.person_id, c.ordinal): c
+        for c in paychecks.checks_in_month(s, prev)
+        if not c.is_one_off and c.person_id is not None
+    }
+    for check in checks:
+        source = prev_checks.get((check.person_id, check.ordinal))
+        if source is None:
+            continue
+        for ln in source.lines:
+            if ln.kind not in COPY_FORWARD_KINDS:
+                continue
+            check.lines.append(
+                PaycheckLine(
+                    kind=ln.kind,
+                    label=ln.label,
+                    amount_cents=ln.amount_cents,
+                    card_id=ln.card_id,
+                    sort_order=50 + ln.sort_order,
+                )
+            )
+    s.flush()
 
 
 def _copy_bills(s: Session, prev: Month | None, new: Month, checks) -> None:

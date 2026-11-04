@@ -62,6 +62,8 @@ def test_is_direct_local():
     assert not auth.is_direct_local("localhost:8765", "127.0.0.1", {"x-forwarded-for": "1.2.3.4"})
     assert not auth.is_direct_local("pc.tailnet.ts.net", "127.0.0.1", {})
     assert not auth.is_direct_local("localhost", "100.64.0.2", {})
+    assert not auth.is_direct_local("localhost", "127.0.0.1", {"Tailscale-User-Name": "x"})
+    assert not auth.is_direct_local("localhost", "127.0.0.1", {"x-forwarded-proto": "https"})
 
 
 def test_same_origin():
@@ -71,3 +73,14 @@ def test_same_origin():
     assert not auth.same_origin("POST", {"host": "a", "sec-fetch-site": "cross-site"})
     assert auth.same_origin("GET", {"host": "a", "origin": "http://evil.com"})
     assert not auth.same_origin("POST", {"host": "a", "referer": "http://evil.com/x"})
+
+
+def test_same_origin_behind_proxy_that_rewrites_host():
+    h = {
+        "host": "127.0.0.1:8765",
+        "x-forwarded-host": "pc.tail1234.ts.net",
+        "origin": "https://pc.tail1234.ts.net",
+    }
+    assert auth.same_origin("POST", h)
+    h["origin"] = "https://evil.example.com"
+    assert not auth.same_origin("POST", h)

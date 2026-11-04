@@ -136,7 +136,7 @@ def ledger_page(
     entries = list(s.scalars(q))
     running = sum(t.amount_cents for t in entries)
     shown = entries
-    cat_id = _opt_int(cat) if cat not in ("uncat",) else None
+    cat_id = int(cat) if cat and cat.isdigit() else None
     if cat == "uncat":
         shown = [t for t in shown if t.category_id is None]
     elif cat_id:
@@ -229,6 +229,8 @@ def delete_txn(
         msg += f" ({links.bill.name} marked unpaid)"
     if links.paycheck:
         msg += f" ({links.paycheck.label} marked not received)"
+    if links.line:
+        msg += f" ({links.line.label} marked not paid)"
     return redirect(f"/ledger{month_qs(month, None)}", msg, undo=f"/txn/{txn.id}/restore")
 
 

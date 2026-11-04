@@ -7,7 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from budget.models import LINE_KINDS, Month, MonthBill, Paycheck, Person
+from budget.models import LINE_KINDS, Month, MonthBill, Paycheck, PaycheckLine, Person
 from budget.money import parse_money
 from budget.services import bills, months, paychecks
 from budget.services.common import BudgetError
@@ -160,6 +160,19 @@ def toggle_check(check_id: int, request: Request, s: Session = Depends(get_db)):
         return redirect(back_url(request, "/checks"), f"{check.label}: not received")
     paychecks.mark_received(s, check)
     return redirect(back_url(request, "/checks"), f"{check.label}: received, added to ledger")
+
+
+@router.post("/line/{line_id}/toggle")
+def toggle_line(line_id: int, request: Request, s: Session = Depends(get_db)):
+    line = s.get(PaycheckLine, line_id) or _404()
+    if line.paid:
+        paychecks.mark_line_unpaid(s, line)
+        return redirect(back_url(request, "/checks"), f"{line.label}: not paid")
+    paychecks.mark_line_paid(s, line)
+    msg = f"{line.label}: paid, added to ledger"
+    if line.kind == "daycare":
+        msg += " as pending"
+    return redirect(back_url(request, "/checks"), msg, undo=f"/line/{line.id}/toggle")
 
 
 @router.post("/check/{check_id}")

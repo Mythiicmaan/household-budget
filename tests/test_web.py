@@ -325,3 +325,29 @@ def test_today_used_for_default_date(client, app, jan):
     with db(app) as s:
         t = s.scalar(select(Txn))
         assert t.date == date.today()
+
+
+def test_check_item_toggle_and_still_to_pay(client, app, jan):
+    with db(app) as s:
+        a1 = s.scalar(select(Paycheck).where(Paycheck.label == "Alex check 1"))
+        savings_line = None
+        from budget.services import paychecks as pc
+
+        savings_line = pc.add_line(s, a1, kind="savings", label="Savings", amount_cents=-5000)
+        s.commit()
+        line_id = savings_line.id
+    page = client.get("/").text
+    assert "Still to pay this month" in page and "Savings" in page and "Rent" in page
+    assert "How this adds up" in page
+    r = client.post(f"/line/{line_id}/toggle")
+    assert r.status_code == 200
+    with db(app) as s:
+        from budget.models import PaycheckLine
+
+        line = s.get(PaycheckLine, line_id)
+        assert line.paid and s.get(Txn, line.paid_txn_id).amount_cents == -5000
+    assert "Mark paid" not in client.get("/checks").text.split("Savings")[1][:400]
+
+
+def test_ledger_bad_filter_does_not_crash(client, jan):
+    assert client.get("/ledger?cat=abc").status_code == 200

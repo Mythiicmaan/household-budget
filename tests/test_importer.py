@@ -242,8 +242,8 @@ def test_live_people_checks_and_remainders(s, imported):
     }
     a1 = checks[0]
     kinds = [ln.kind for ln in a1.lines]
-    assert kinds == ["bill", "other", "groceries", "daycare", "card_payment"]
-    assert a1.lines[3].line_date == date(2026, 12, 7)
+    assert kinds == ["bill", "bill", "bill", "groceries", "daycare", "card_payment"]
+    assert a1.lines[4].line_date == date(2026, 12, 7)
     s1 = checks[1]
     assert s1.lines[1].label == "Childcare 12-14-26 (estimate)"
     # Stale September block skipped.
@@ -261,9 +261,13 @@ def test_live_bills_template_and_links(s, imported):
     # "Sa" prefix maps to Sam; the line amount (82) is close to the bill (80) so it links.
     assert bills["Phone Bill"].assigned_check.label == "Sam check 1"
     assert paychecks.bill_line(s, bills["Phone Bill"]).amount_cents == -8200
-    # Combined line: both bills assigned to the check but not linked to a line.
-    assert bills["Streaming A"].assigned_check.label == "Alex check 1"
-    assert paychecks.bill_line(s, bills["Streaming A"]) is None
+    # Combined line "Streaming A, B" (15) = 10 + 5: split into one line per bill.
+    a1 = bills["Streaming A"].assigned_check
+    assert paychecks.bill_line(s, bills["Streaming A"]).amount_cents == -1000
+    assert paychecks.bill_line(s, bills["Streaming B"]).amount_cents == -500
+    assert paychecks.remainder(a1) == 162500  # unchanged by the split
+    # Water: line amount (45) too far from the bill (40) -> left as on the sheet.
+    assert paychecks.bill_line(s, bills["Water"]) is None
     tpl = s.scalar(select(BillTemplate).where(BillTemplate.name == "Rent"))
     assert tpl.assigned_check_ordinal == 2 and tpl.person.name == "Alex"
     assert not bills["Rent"].paid
@@ -275,10 +279,13 @@ def test_editing_unlinked_bill_does_not_add_a_duplicate_line(s, imported):
     dec = imported.live_month
     a1 = next(c for c in paychecks.checks_in_month(s, dec) if c.label == "Alex check 1")
     before = paychecks.remainder(a1)
-    sa = s.scalar(select(MonthBill).where(MonthBill.name == "Streaming A"))
-    bill_svc.update_bill(s, sa, amount_cents=1100)
+    water = s.scalar(select(MonthBill).where(MonthBill.name == "Water"))
+    s2 = water.assigned_check
+    before_s2 = paychecks.remainder(s2)
+    bill_svc.update_bill(s, water, amount_cents=4200)
     s.commit()
-    s.refresh(a1)
+    s.refresh(s2)
+    assert paychecks.remainder(s2) == before_s2
     assert paychecks.remainder(a1) == before
 
 
@@ -302,3 +309,12 @@ def test_next_month_after_import(s, imported):
 def test_refuses_non_empty_database(s, imported, workbook):
     with pytest.raises(ImportProblem):
         import_workbook(s, workbook)
+
+
+def test_name_matching():
+    from budget.importer import _names_match
+
+    assert _names_match("Water / Elect November 2026", "Water + Electric")
+    assert _names_match("StreamBox November 2026", "Stream Box Extra")
+    assert _names_match("Books/Music November 2026", "Books and Music")
+    assert not _names_match("Card A", "Internet")

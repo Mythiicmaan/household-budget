@@ -252,7 +252,13 @@ def test_projected_end_and_next_check(s, jan):
     expected_checks = 150000 + 200000 + 150000 + 200000
     unpaid = 120000 + 8000 + 4000
     assert summ.running_total_cents == running
-    assert summ.projected_end_cents == 100000 + running + expected_checks - unpaid
+    childcare_lines = 5 * 10000  # one unpaid childcare line per check
+    budget_left = 60000 + 20000  # nothing spent yet on groceries or gas
+    assert summ.projected_end_cents == (
+        100000 + running + expected_checks - unpaid - childcare_lines - budget_left
+    )
+    assert summ.unpaid_lines_cents == childcare_lines
+    assert summ.budget_left_cents == budget_left
     assert summ.next_check.label == "Sam check 1"
     assert {b.name for b in summ.unpaid_bills} == {"Rent", "Phone", "Water"}
 
@@ -360,3 +366,76 @@ def test_card_update_archive_delete(s):
     cards.delete_card(s, card)
     s.commit()
     assert cards.archived_cards(s) == []
+
+
+# ---------------------------------------------------------------- planned check items
+
+
+def test_check_line_paid_lifecycle_and_projection(s, jan):
+    a1 = check_for(s, jan, "Alex", 1)
+    childcare = next(ln for ln in a1.lines if ln.kind == "daycare")
+    before = summary.month_summary(s, jan).projected_end_cents
+
+    txn = paychecks.mark_line_paid(s, childcare)
+    s.commit()
+    assert childcare.paid and txn.amount_cents == -10000
+    assert txn.pending  # childcare is paid by paper check, so it starts pending
+    assert txn.date == date(2027, 1, 4)  # the Monday the line is for
+    # Paying a planned item moves money from "planned" to "spent": projection unchanged.
+    assert summary.month_summary(s, jan).projected_end_cents == before
+
+    # Holiday week: childcare comes in lower; the entry follows the line.
+    paychecks.update_line(s, childcare, amount_cents=-6000)
+    s.commit()
+    assert txn.amount_cents == -6000
+    assert summary.month_summary(s, jan).projected_end_cents == before + 4000
+
+    links = ledger.delete_txn(s, txn)
+    assert links.line is childcare and not childcare.paid
+    ledger.restore_txn(s, txn)
+    assert childcare.paid
+    paychecks.mark_line_unpaid(s, childcare)
+    t2 = paychecks.mark_line_paid(s, childcare)
+    s.commit()
+    assert t2.id == txn.id and t2.deleted_at is None
+
+
+def test_bill_and_grocery_lines_have_no_toggle(s, jan):
+    a1 = check_for(s, jan, "Alex", 1)
+    for ln in a1.lines:
+        if ln.kind in ("bill", "groceries"):
+            with pytest.raises(BudgetError):
+                paychecks.mark_line_paid(s, ln)
+
+
+def test_editing_one_weeks_line_leaves_other_weeks_alone(s, jan):
+    a1, s1 = check_for(s, jan, "Alex", 1), check_for(s, jan, "Sam", 1)
+    c1 = next(ln for ln in a1.lines if ln.kind == "daycare")
+    paychecks.update_line(s, c1, amount_cents=-5000)
+    s.commit()
+    assert next(ln for ln in s1.lines if ln.kind == "daycare").amount_cents == -10000
+
+
+def test_new_month_carries_recurring_check_items_forward(s, jan):
+    a1 = check_for(s, jan, "Alex", 1)
+    paychecks.add_line(s, a1, kind="savings", label="Savings", amount_cents=-5000)
+    paid = paychecks.add_line(s, a1, kind="card_payment", label="Card A", amount_cents=-7500)
+    paychecks.mark_line_paid(s, paid)
+    paychecks.add_line(
+        s, check_for(s, jan, "Alex", 3), kind="other", label="Extra", amount_cents=-100
+    )
+    feb = months.start_month(s, 2027, 2, bank_balance_cents=0)
+    s.commit()
+    f1 = check_for(s, feb, "Alex", 1)
+    copied = [
+        (ln.kind, ln.label, ln.amount_cents, ln.paid)
+        for ln in f1.lines
+        if ln.kind in ("savings", "card_payment")
+    ]
+    assert copied == [
+        ("savings", "Savings", -5000, False),
+        ("card_payment", "Card A", -7500, False),
+    ]
+    # Weekly lines come from Settings (not copied twice); February has no 3rd check.
+    assert [ln.kind for ln in f1.lines].count("daycare") == 1
+    assert all(ln.label != "Extra" for c in paychecks.checks_in_month(s, feb) for ln in c.lines)

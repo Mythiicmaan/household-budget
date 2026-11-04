@@ -31,7 +31,7 @@ SESSION_SECRET_KEY = "session_secret"  # noqa: S105 - a settings key name, not a
 COOKIE_NAME = "hb_session"
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]"}
 LOCAL_CLIENTS = {"127.0.0.1", "::1"}
-PROXY_HEADERS = ("x-forwarded-for", "x-forwarded-host", "tailscale-user-login", "forwarded")
+PROXY_HEADERS = ("x-forwarded-for", "x-forwarded-host", "x-forwarded-proto", "forwarded")
 
 _hasher = PasswordHasher()
 
@@ -158,19 +158,30 @@ def is_direct_local(host_header: str | None, client_host: str | None, headers) -
         return False
     if client_host not in LOCAL_CLIENTS:
         return False
-    return not any(h in headers for h in PROXY_HEADERS)
+    names = {k.lower() for k in headers}
+    if any(h in names for h in PROXY_HEADERS):
+        return False
+    return not any(n.startswith("tailscale-") for n in names)
 
 
 def same_origin(method: str, headers) -> bool:
-    """Reject cross-site writes. Browsers send Origin (and Sec-Fetch-Site) on form posts."""
+    """Reject cross-site writes. Browsers send Origin (and Sec-Fetch-Site) on form posts.
+
+    The page's own host is the Host header, or X-Forwarded-Host when a local proxy such as
+    ``tailscale serve`` rewrote Host (a cross-site form can't set that header).
+    """
     if method in ("GET", "HEAD", "OPTIONS"):
         return True
     if headers.get("sec-fetch-site", "") == "cross-site":
         return False
+    hosts = {
+        (headers.get("host") or "").lower(),
+        (headers.get("x-forwarded-host") or "").split(",")[0].strip().lower(),
+    } - {""}
     origin = headers.get("origin")
     if origin and origin != "null":
-        return urlsplit(origin).netloc.lower() == (headers.get("host") or "").lower()
+        return urlsplit(origin).netloc.lower() in hosts
     referer = headers.get("referer")
     if referer:
-        return urlsplit(referer).netloc.lower() == (headers.get("host") or "").lower()
+        return urlsplit(referer).netloc.lower() in hosts
     return True

@@ -34,15 +34,35 @@ def projected_end_balance(
     running_total_cents: int,
     checks_not_received: Iterable[int],
     unpaid_bill_amounts: Iterable[int],
+    *,
+    unpaid_line_amounts: Iterable[int] = (),
+    budget_left: Iterable[int] = (),
 ) -> int:
-    """Projected end-of-month balance.
+    """Where the account lands once everything planned for the month has happened.
 
-    = true starting balance + running total + checks still expected
-      - unpaid planned bills (bill amounts are positive sizes).
+    = true starting balance
+      + running total (everything entered so far)
+      + checks still expected
+      - unpaid bills (positive bill sizes)
+      + unpaid planned check items (signed lines, e.g. childcare -100, card payment -50)
+      - what's still left in soft budgets like gas and groceries (positive amounts)
     A missing starting balance counts as 0 so the projection still shows the trend.
     """
     start = true_start_cents or 0
-    return start + running_total_cents + sum(checks_not_received) - sum(unpaid_bill_amounts)
+    return (
+        start
+        + running_total_cents
+        + sum(checks_not_received)
+        - sum(unpaid_bill_amounts)
+        + sum(unpaid_line_amounts)
+        - sum(budget_left)
+    )
+
+
+def budget_left(remaining_amounts: Iterable[int]) -> list[int]:
+    """Money still expected to be spent from soft budgets. Overspending is already in the
+    running total, so a negative remaining counts as nothing left."""
+    return [max(0, r) for r in remaining_amounts]
 
 
 def category_remaining(target_cents: int, category_entry_amounts: Iterable[int]) -> int:
