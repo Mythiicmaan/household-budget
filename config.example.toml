@@ -18,8 +18,10 @@ localhost_skip_pin = true   # the desktop itself (http://localhost:8765) skips t
 session_days = 90
 
 [backup]
-# Folder for nightly backups (set up in a later phase).
+# Nightly backups (2:00 AM) go here. If this drive is missing the app shows a
+# banner and logs the failure; it never writes the backup anywhere else.
 dir = 'E:\Backups\HouseholdBudget'
+nightly = true
 
 # ---------------------------------------------------------------------------
 # Seed values: used ONLY when the database is created for the first time.
