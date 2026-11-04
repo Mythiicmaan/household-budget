@@ -483,7 +483,8 @@ def link_bill_lines(check: Paycheck, bills: list[MonthBill]) -> dict[int, str]:
     1. One line per bill when the names match and the amounts are within 10%.
     2. One combined line covering several bills ("A, B, C") when those bills' amounts add
        up to the line exactly: the line is split into one line per bill (same total).
-    Anything else is left as it is on the sheet, so the check's remainder never changes.
+    3. A line with the bill's name but a different amount: linked, amounts kept as-is.
+    Check remainders never change.
     """
     how: dict[int, str] = {}
     open_bills = [b for b in bills if b.assigned_check_id == check.id]
@@ -538,6 +539,25 @@ def link_bill_lines(check: Paycheck, bills: list[MonthBill]) -> dict[int, str]:
                     how[b.id] = f"split out of the combined line {line.label!r}"
                 left = [b for b in left if b.id not in how]
                 break
+    # 3. Same name, different amount (e.g. the check sets aside more than the bill):
+    #    still the bill's line, so it isn't also counted as a separate planned item.
+    #    The check keeps the sheet's amount; the bill keeps the bill list's amount.
+    for b in list(left):
+        line = next(
+            (
+                ln
+                for ln in check.lines
+                if ln.month_bill_id is None
+                and ln.kind not in ("groceries", "daycare")
+                and _names_match(ln.label, b.name)
+            ),
+            None,
+        )
+        if line:
+            line.kind = "bill"
+            line.month_bill_id = b.id
+            how[b.id] = f"line linked (check sets aside {_fmt(-line.amount_cents)})"
+            left.remove(b)
     for b in left:
         how[b.id] = "no matching line on the check; check lines kept as on the sheet"
     return how

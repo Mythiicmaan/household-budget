@@ -55,10 +55,11 @@ def build_workbook(path):
         ("Streaming B", 5, "Alex Check 1", ""),
         ("Childcare x 4", 400, "Weekly", "Mondays"),
         ("Water", 40, "Sam Check 2", "quarterly-ish"),
+        ("Gym", 30, "Alex Check 1", ""),
     ]
     for i, (a, b, c, d) in enumerate(bills, start=2):
         live[f"A{i}"], live[f"B{i}"], live[f"C{i}"], live[f"D{i}"] = a, b, c, d
-    live["A10"], live["B10"] = "Special items", "?"
+    live["A11"], live["B11"] = "Special items", "?"
     live["A23"], live["B23"] = "Gas Budget:", "=200+F5"
     live["A24"], live["B24"] = "Groceries Budget:", "=600+F4+F6"
 
@@ -261,7 +262,15 @@ def test_live_people_checks_and_remainders(s, imported):
 def test_live_bills_template_and_links(s, imported):
     dec = imported.live_month
     bills = {b.name: b for b in s.scalars(select(MonthBill).where(MonthBill.month_id == dec.id))}
-    assert set(bills) == {"Rent", "Internet", "Phone Bill", "Streaming A", "Streaming B", "Water"}
+    assert set(bills) == {
+        "Rent",
+        "Internet",
+        "Phone Bill",
+        "Streaming A",
+        "Streaming B",
+        "Water",
+        "Gym",
+    }
     # Weekly item becomes per-check lines, not a bill.
     assert any("weekly item" in line for line in imported.report)
     # Internet: paid by a matching ledger entry, and its check line is linked.
@@ -274,8 +283,11 @@ def test_live_bills_template_and_links(s, imported):
     assert paychecks.bill_line(s, bills["Streaming A"]).amount_cents == -1000
     assert paychecks.bill_line(s, bills["Streaming B"]).amount_cents == -500
     assert paychecks.remainder(a1) == 162500  # unchanged by the split
-    # Water: line amount (45) too far from the bill (40) -> left as on the sheet.
-    assert paychecks.bill_line(s, bills["Water"]) is None
+    # Water: the check sets aside 45 for a 40 bill -> linked, both amounts kept.
+    assert paychecks.bill_line(s, bills["Water"]).amount_cents == -4500
+    assert bills["Water"].amount_cents == 4000
+    # Gym has no line on its check at all.
+    assert paychecks.bill_line(s, bills["Gym"]) is None
     tpl = s.scalar(select(BillTemplate).where(BillTemplate.name == "Rent"))
     assert tpl.assigned_check_ordinal == 2 and tpl.person.name == "Alex"
     assert not bills["Rent"].paid
@@ -287,13 +299,10 @@ def test_editing_unlinked_bill_does_not_add_a_duplicate_line(s, imported):
     dec = imported.live_month
     a1 = next(c for c in paychecks.checks_in_month(s, dec) if c.label == "Alex check 1")
     before = paychecks.remainder(a1)
-    water = s.scalar(select(MonthBill).where(MonthBill.name == "Water"))
-    s2 = water.assigned_check
-    before_s2 = paychecks.remainder(s2)
-    bill_svc.update_bill(s, water, amount_cents=4200)
+    gym = s.scalar(select(MonthBill).where(MonthBill.name == "Gym"))
+    bill_svc.update_bill(s, gym, amount_cents=3500)
     s.commit()
-    s.refresh(s2)
-    assert paychecks.remainder(s2) == before_s2
+    s.refresh(a1)
     assert paychecks.remainder(a1) == before
 
 

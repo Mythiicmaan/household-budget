@@ -158,10 +158,18 @@ details[open] > summary { margin-bottom: 8px; }
 .fab {
   position: fixed; right: 16px; z-index: 11;
   bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);
-  width: 64px; height: 64px; border-radius: 50%; border: 0;
-  background: var(--accent); color: #fff; font-size: 2rem; line-height: 1;
+  width: 64px; height: 64px; border-radius: 50%; border: 0; padding: 0;
+  display: block; background: var(--accent); color: #fff;
+  font-size: 0; /* the "+" is drawn below so it is exactly centered */
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45); cursor: pointer;
 }
+.fab::before, .fab::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  background: #fff; border-radius: 2px; transform: translate(-50%, -50%);
+}
+.fab::before { width: 26px; height: 4px; }
+.fab::after { width: 4px; height: 26px; }
+.fab:active { transform: scale(0.95); }
 
 /* Quick-add sheet */
 dialog.sheet {

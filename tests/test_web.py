@@ -351,3 +351,30 @@ def test_check_item_toggle_and_still_to_pay(client, app, jan):
 
 def test_ledger_bad_filter_does_not_crash(client, jan):
     assert client.get("/ledger?cat=abc").status_code == 200
+
+
+def test_saving_a_check_unchanged_leaves_its_bills_alone(client, app, jan):
+    """Imported bill lines can be worded/priced differently from the bill list. Pressing
+    Save on the check without touching them must not rewrite the bill."""
+    with db(app) as s:
+        rent = s.scalar(select(MonthBill).where(MonthBill.name == "Rent"))
+        from budget.services import paychecks as pc
+
+        line = pc.bill_line(s, rent)
+        line.label, line.amount_cents = "Rent December 2026", -121000
+        check = line.paycheck
+        form = {"label": check.label, "amount": "2000.00"}
+        for ln in check.lines:
+            form[f"line-{ln.id}-label"] = ln.label
+            form[f"line-{ln.id}-amount"] = f"{abs(ln.amount_cents) / 100:.2f}"
+        s.commit()
+        rent_id, check_id, line_id = rent.id, check.id, line.id
+    client.post(f"/check/{check_id}", data=form)
+    with db(app) as s:
+        rent = s.get(MonthBill, rent_id)
+        assert (rent.name, rent.amount_cents) == ("Rent", 120000)
+    # Actually changing the line's amount does update the bill (they mirror each other).
+    form[f"line-{line_id}-amount"] = "1250.00"
+    client.post(f"/check/{check_id}", data=form)
+    with db(app) as s:
+        assert s.get(MonthBill, rent_id).amount_cents == 125000

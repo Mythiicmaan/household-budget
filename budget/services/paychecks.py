@@ -230,10 +230,14 @@ def update_line(
     if line.month_bill_id:
         # A bill line mirrors its bill; edit the bill instead so both stay in sync.
         bill = s.get(MonthBill, line.month_bill_id)
-        if amount_cents is not None:
+        if amount_cents is not None and amount_cents != line.amount_cents:
             bill.amount_cents = abs(amount_cents)
             line.amount_cents = -abs(amount_cents)
-        if label is not None and label.strip():
+            if bill.paid and bill.paid_txn_id:
+                txn = s.get(Txn, bill.paid_txn_id)
+                if txn and txn.deleted_at is None:
+                    ledger.update_txn(s, txn, amount_cents=-bill.amount_cents)
+        if label is not None and label.strip() and label.strip() != line.label:
             bill.name = label.strip()
             line.label = bill.name
         return

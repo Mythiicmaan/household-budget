@@ -192,13 +192,17 @@ async def edit_check(check_id: int, request: Request, s: Session = Depends(get_d
         if checkbox(form.get(prefix + "delete")):
             paychecks.delete_line(s, line)
             continue
+        # Only send what the user actually changed. (Saving a check must not rewrite the
+        # bills behind its bill lines with the check's own wording or amounts.)
         raw = str(form.get(prefix + "amount", "")).strip()
-        if raw:
+        new_label = str(form.get(prefix + "label", line.label)).strip()
+        new_amount = -abs(parse_money(raw)) if raw else line.amount_cents
+        if new_label != line.label.strip() or new_amount != line.amount_cents:
             paychecks.update_line(
                 s,
                 line,
-                label=str(form.get(prefix + "label", line.label)),
-                amount_cents=-abs(parse_money(raw)),
+                label=new_label if new_label != line.label.strip() else None,
+                amount_cents=new_amount if new_amount != line.amount_cents else None,
             )
     new_amount = str(form.get("new-amount", "")).strip()
     if new_amount:
