@@ -37,7 +37,11 @@
     <div class="line-row" data-line>
       <input type="text" name="line-{{ ln.id }}-label" value="{{ ln.label }}" aria-label="Line label">
       <input type="text" inputmode="decimal" data-amt name="line-{{ ln.id }}-amount" value="{{ (ln.amount_cents|abs) | input_cents }}" aria-label="Line amount">
-      <input class="del" type="checkbox" name="line-{{ ln.id }}-delete" title="Remove line" aria-label="Remove {{ ln.label }}">
+      {% if not month.locked %}
+      <button class="line-remove" type="submit" name="line-{{ ln.id }}-delete" value="on" formnovalidate
+        title="Remove this line" aria-label="Remove {{ ln.label }}"
+        data-confirm="Remove {{ ln.label }} from {{ c.label }}?{% if ln.kind == 'bill' %} The bill stays on the Bills page.{% elif ln.paid %} Its ledger entry stays.{% endif %}">&#10005;</button>
+      {% endif %}
     </div>
     {% if ln.kind == "bill" %}
       {% if ln.month_bill and ln.month_bill.paid %}<div class="line-status small muted">paid ✓</div>{% endif %}
@@ -71,7 +75,7 @@
     {% if not month.locked %}
     <div class="row">
       <button class="btn primary" type="submit">Save</button>
-      <span class="muted small">Each week's line is its own: change one without touching the others. ☐ removes a line.</span>
+      <span class="muted small">Each week's line is its own: change one without touching the others.</span>
     </div>
     {% endif %}
   </form>

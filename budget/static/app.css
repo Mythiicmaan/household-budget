@@ -207,9 +207,12 @@ table.simple th, table.simple td { padding: 8px 6px; border-top: 1px solid var(-
 table.simple td.amt, table.simple th.amt { text-align: right; }
 
 .check-card h2 { display: flex; justify-content: space-between; gap: 8px; }
-.line-row { display: grid; grid-template-columns: 1fr 110px 28px; gap: 6px; align-items: center; margin: 6px 0; }
+.line-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 40px; gap: 6px; align-items: center; margin: 6px 0; }
 .line-row input[type=text] { padding: 8px 10px; }
-.line-row .del { width: 22px; height: 22px; }
+.line-remove {
+  width: 40px; height: 40px; padding: 0; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px solid var(--bad); color: var(--bad); font-size: 1rem; font-weight: 700;
+}
 .line-status { margin: -2px 0 8px 2px; }
 .remainder { font-size: 1.15rem; font-weight: 800; }
 .grow { flex: 1; min-width: 0; }

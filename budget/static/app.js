@@ -86,13 +86,18 @@
       });
     });
 
+    // Destructive buttons ask first.
+    root.querySelectorAll("button[data-confirm]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        if (!window.confirm(btn.dataset.confirm)) e.preventDefault();
+      });
+    });
+
     // Live remainder on paycheck cards.
     root.querySelectorAll("form[data-check-form]").forEach(function (form) {
       function recalc() {
         var total = num(form.querySelector("input[name=amount]").value);
         form.querySelectorAll("[data-line]").forEach(function (row) {
-          var del = row.querySelector("input[type=checkbox]");
-          if (del && del.checked) return;
           total -= Math.abs(num(row.querySelector("input[data-amt]").value));
         });
         var extra = form.querySelector("input[name=new-amount]");

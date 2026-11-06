@@ -426,3 +426,27 @@ def test_editing_bill_amount_on_the_bills_page(client, app, jan):
     page = client.get("/bills").text
     assert "$1,250.00" in page and "Edit" in page
     assert "1250" in client.get("/checks").text
+
+
+def test_check_lines_have_a_remove_button_not_a_checkbox(client, app, jan):
+    with db(app) as s:
+        a2 = s.scalar(select(Paycheck).where(Paycheck.label == "Alex check 2"))
+        check_id = a2.id
+        keep, drop = a2.lines[0].id, a2.lines[1].id
+        form = {"label": a2.label, "amount": "2000"}
+        for ln in a2.lines:
+            form[f"line-{ln.id}-label"] = ln.label
+            form[f"line-{ln.id}-amount"] = f"{abs(ln.amount_cents) / 100:.2f}"
+    page = client.get("/checks").text
+    assert f'name="line-{drop}-delete" value="on"' in page
+    assert 'type="checkbox" name="line-' not in page
+
+    # A plain Save removes nothing.
+    client.post(f"/check/{check_id}", data=form)
+    with db(app) as s:
+        assert len(s.get(Paycheck, check_id).lines) == 2
+
+    # Only the Remove button (which sends that one field) removes its line.
+    client.post(f"/check/{check_id}", data={**form, f"line-{drop}-delete": "on"})
+    with db(app) as s:
+        assert [ln.id for ln in s.get(Paycheck, check_id).lines] == [keep]
