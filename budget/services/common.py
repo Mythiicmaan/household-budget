@@ -13,6 +13,7 @@ from budget.schedule import PerCheckLineTemplate
 
 PER_CHECK_LINES_KEY = "per_check_lines"
 BILLS_CATEGORY_KEY = "bills_category"
+GROCERIES_CATEGORY_KEY = "groceries_category"
 
 
 class BudgetError(ValueError):
@@ -71,6 +72,11 @@ def save_per_check_line_templates(s: Session, templates: list[PerCheckLineTempla
 
 def bills_category(s: Session) -> Category | None:
     name = get_setting(s, BILLS_CATEGORY_KEY, "Bills") or "Bills"
+    return s.scalar(select(Category).where(Category.name.ilike(name)))
+
+
+def groceries_category(s: Session) -> Category | None:
+    name = get_setting(s, GROCERIES_CATEGORY_KEY, "Groceries") or "Groceries"
     return s.scalar(select(Category).where(Category.name.ilike(name)))
 
 

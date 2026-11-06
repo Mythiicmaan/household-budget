@@ -13,7 +13,11 @@ from budget.models import Category, Month, MonthBill, Paycheck, Txn
 from budget.schedule import month_label
 from budget.services import bills as bill_svc
 from budget.services import ledger, months, paychecks
-from budget.services.common import active_txns_query
+from budget.services.common import (
+    active_txns_query,
+    groceries_category,
+    per_check_line_templates,
+)
 
 
 @dataclass
@@ -155,6 +159,89 @@ def month_summary(s: Session, month: Month, today: date | None = None) -> MonthS
         budget_left_cents=sum(left),
         to_pay=to_pay,
     )
+
+
+@dataclass
+class GroceriesRow:
+    """Follows ledger entries in the Groceries category, the same number as Home."""
+
+    label: str
+    budget_cents: int
+    left_cents: int  # negative when over budget
+
+    @property
+    def spent_cents(self) -> int:
+        return self.budget_cents - self.left_cents
+
+    @property
+    def over(self) -> bool:
+        return self.left_cents < 0
+
+
+@dataclass
+class DaycareRow:
+    """Reads the weekly daycare lines on the month's checks."""
+
+    label: str
+    total_cents: int
+    unpaid_cents: int
+    paid_count: int
+    week_count: int
+    next_when: date | None  # the next unpaid week, if any
+
+
+@dataclass
+class BillsPage:
+    bills: list[MonthBill]
+    groceries: GroceriesRow | None
+    daycare: DaycareRow | None
+    total_cents: int
+    unpaid_cents: int
+
+
+def bills_page(s: Session, month: Month) -> BillsPage:
+    """The bills list plus the two weekly rows. The rows read existing data rather than
+    storing bills of their own, so nothing is counted twice."""
+    items = bill_svc.bills_in_month(s, month)
+    groceries = None
+    daycare = None
+    if not month.is_history:
+        cat = groceries_category(s)
+        if cat is not None and cat.monthly_target_cents is not None:
+            entries = [
+                t.amount_cents
+                for t in s.scalars(active_txns_query(month.id))
+                if t.category_id == cat.id
+            ]
+            groceries = GroceriesRow(
+                label=cat.name,
+                budget_cents=cat.monthly_target_cents,
+                left_cents=calc.category_remaining(cat.monthly_target_cents, entries),
+            )
+        lines = paychecks.daycare_lines(paychecks.checks_in_month(s, month))
+        if lines:
+            unpaid = [ln for ln in lines if not ln.paid]
+            label = next(
+                (t.label for t in per_check_line_templates(s) if t.kind == "daycare"), "Daycare"
+            )
+            daycare = DaycareRow(
+                label=label,
+                total_cents=-sum(ln.amount_cents for ln in lines),
+                unpaid_cents=-sum(ln.amount_cents for ln in unpaid),
+                paid_count=len(lines) - len(unpaid),
+                week_count=len(lines),
+                next_when=(unpaid[0].line_date or unpaid[0].paycheck.pay_date) if unpaid else None,
+            )
+
+    total = sum(b.amount_cents for b in items)
+    still_unpaid = sum(b.amount_cents for b in items if not b.paid)
+    if groceries:
+        total += groceries.budget_cents
+        still_unpaid += sum(calc.budget_left([groceries.left_cents]))
+    if daycare:
+        total += daycare.total_cents
+        still_unpaid += daycare.unpaid_cents
+    return BillsPage(items, groceries, daycare, total, still_unpaid)
 
 
 @dataclass

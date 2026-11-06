@@ -439,3 +439,188 @@ def test_new_month_carries_recurring_check_items_forward(s, jan):
     # Weekly lines come from Settings (not copied twice); February has no 3rd check.
     assert [ln.kind for ln in f1.lines].count("daycare") == 1
     assert all(ln.label != "Extra" for c in paychecks.checks_in_month(s, feb) for ln in c.lines)
+
+
+# ---------------------------------------------------------------- editing bills
+
+
+def set_line(s, bill, *, label, cents):
+    """Make a bill's check line differ from the bill, as imported checks can."""
+    line = paychecks.bill_line(s, bill)
+    line.label, line.amount_cents = label, cents
+    s.commit()
+    return line
+
+
+def test_saving_a_bill_without_changing_its_amount_leaves_the_check_line(s, jan):
+    rent = bill_named(s, jan, "Rent")
+    line = set_line(s, rent, label="Rent January 2027", cents=-125000)
+    bills.update_bill(s, rent, name="Rent", amount_cents=120000, note="due on the 1st")
+    s.commit()
+    assert rent.note == "due on the 1st"
+    assert (line.label, line.amount_cents) == ("Rent January 2027", -125000)
+
+
+def test_changing_a_bills_amount_updates_its_check_line(s, jan):
+    rent = bill_named(s, jan, "Rent")
+    line = set_line(s, rent, label="Rent January 2027", cents=-125000)
+    bills.update_bill(s, rent, name="Rent", amount_cents=130000)
+    s.commit()
+    assert line.amount_cents == -130000
+    assert line.label == "Rent January 2027"  # only the amount changed
+    assert summary.month_summary(s, jan).unpaid_bills_cents == 130000 + 6000 + 8000 + 4000
+
+
+def test_renaming_a_bill_renames_its_check_line(s, jan):
+    rent = bill_named(s, jan, "Rent")
+    line = set_line(s, rent, label="Rent January 2027", cents=-125000)
+    bills.update_bill(s, rent, name="Housing", amount_cents=120000)
+    s.commit()
+    assert (line.label, line.amount_cents) == ("Housing", -125000)
+
+
+def test_moving_a_bill_keeps_its_line_amount(s, jan):
+    rent = bill_named(s, jan, "Rent")
+    set_line(s, rent, label="Rent January 2027", cents=-125000)
+    a1 = check_for(s, jan, "Alex", 1)
+    bills.update_bill(s, rent, amount_cents=120000, check=a1)
+    s.commit()
+    moved = paychecks.bill_line(s, rent)
+    assert moved.paycheck_id == a1.id
+    assert (moved.label, moved.amount_cents) == ("Rent January 2027", -125000)
+
+
+def test_editing_a_paid_bill_only_touches_its_entry_when_needed(s, jan):
+    rent = bill_named(s, jan, "Rent")
+    txn = bills.mark_paid(s, rent, date(2027, 1, 15))
+    txn.description = "Rent via bank transfer"
+    s.commit()
+    bills.update_bill(s, rent, name="Rent", amount_cents=120000, note="noted")
+    s.commit()
+    assert (txn.description, txn.amount_cents) == ("Rent via bank transfer", -120000)
+    bills.update_bill(s, rent, name="Rent", amount_cents=121000)
+    s.commit()
+    assert (txn.description, txn.amount_cents) == ("Rent via bank transfer", -121000)
+
+
+def test_changed_amount_carries_to_next_month_but_not_the_template(s, jan):
+    internet = bill_named(s, jan, "Internet")
+    bills.update_bill(s, internet, amount_cents=7000)
+    feb = months.start_month(s, 2027, 2, bank_balance_cents=0)
+    s.commit()
+    assert internet.template.default_amount_cents == 6000
+    assert bill_named(s, feb, "Internet").amount_cents == 7000
+
+
+# ---------------------------------------------------------------- weekly rows on the bills page
+
+
+def test_daycare_paid_1x_pays_the_next_week_at_that_weeks_amount(s, jan):
+    holiday_check = check_for(s, jan, "Alex", 2)  # the third Friday of the month
+    holiday = next(ln for ln in holiday_check.lines if ln.kind == "daycare")
+    paychecks.update_line(s, holiday, amount_cents=-15000)
+    s.commit()
+
+    row = summary.bills_page(s, jan).daycare
+    assert (row.total_cents, row.paid_count, row.week_count) == (55000, 0, 5)
+
+    first = paychecks.pay_next_daycare(s, jan)
+    second = paychecks.pay_next_daycare(s, jan)
+    third = paychecks.pay_next_daycare(s, jan)
+    s.commit()
+    assert [first.date, second.date, third.date] == [
+        date(2027, 1, 4),
+        date(2027, 1, 11),
+        date(2027, 1, 18),
+    ]
+    assert third.amount_cents == -15000  # the holiday week's own amount
+    assert all(t.pending for t in (first, second, third))
+    row = summary.bills_page(s, jan).daycare
+    assert (row.paid_count, row.unpaid_cents) == (3, 20000)
+
+
+def test_daycare_undo_reverses_the_most_recent_week(s, jan):
+    first = paychecks.pay_next_daycare(s, jan)
+    second = paychecks.pay_next_daycare(s, jan)
+    paychecks.undo_last_daycare(s, jan)
+    s.commit()
+    assert second.deleted_at is not None and first.deleted_at is None
+    assert summary.bills_page(s, jan).daycare.paid_count == 1
+    # Paying again brings that same week back, not a duplicate entry.
+    again = paychecks.pay_next_daycare(s, jan)
+    s.commit()
+    assert again.id == second.id and again.deleted_at is None
+
+
+def test_daycare_all_paid_and_nothing_to_undo(s, jan):
+    with pytest.raises(BudgetError):
+        paychecks.undo_last_daycare(s, jan)
+    for _ in range(5):
+        paychecks.pay_next_daycare(s, jan)
+    with pytest.raises(BudgetError):
+        paychecks.pay_next_daycare(s, jan)
+
+
+def test_daycare_row_matches_mark_paid_from_other_pages(s, jan):
+    line = next(ln for ln in check_for(s, jan, "Sam", 1).lines if ln.kind == "daycare")
+    paychecks.mark_line_paid(s, line)
+    s.commit()
+    assert summary.bills_page(s, jan).daycare.paid_count == 1
+
+
+def test_groceries_row_follows_ledger_entries(s, jan):
+    groceries = cat(s, "Groceries")
+    ledger.add_txn(
+        s, month=jan, date_=date(2027, 1, 3), amount_cents=-4510, category_id=groceries.id
+    )
+    ledger.add_txn(s, month=jan, date_=date(2027, 1, 3), amount_cents=-999)  # no category
+    s.commit()
+    row = summary.bills_page(s, jan).groceries
+    assert (row.budget_cents, row.spent_cents, row.left_cents) == (60000, 4510, 55490)
+    assert not row.over
+    home = next(t for t in summary.month_summary(s, jan).targets if t.category.name == "Groceries")
+    assert home.remaining_cents == row.left_cents  # the Bills page and Home always agree
+
+
+def test_bills_page_totals_include_both_rows(s, jan):
+    page = summary.bills_page(s, jan)
+    the_bills = 120000 + 6000 + 8000 + 4000
+    assert page.total_cents == the_bills + 60000 + 50000
+    assert page.unpaid_cents == the_bills + 60000 + 50000
+
+    paychecks.pay_next_daycare(s, jan)
+    bills.mark_paid(s, bill_named(s, jan, "Internet"), date(2027, 1, 2))
+    groceries = cat(s, "Groceries")
+    ledger.add_txn(
+        s, month=jan, date_=date(2027, 1, 3), amount_cents=-10000, category_id=groceries.id
+    )
+    s.commit()
+    page = summary.bills_page(s, jan)
+    assert page.total_cents == the_bills + 60000 + 50000  # the month's plan does not shrink
+    assert page.unpaid_cents == (the_bills - 6000) + 50000 + 40000
+
+
+def test_groceries_over_budget_adds_nothing_to_unpaid(s, jan):
+    groceries = cat(s, "Groceries")
+    ledger.add_txn(
+        s, month=jan, date_=date(2027, 1, 3), amount_cents=-70000, category_id=groceries.id
+    )
+    s.commit()
+    page = summary.bills_page(s, jan)
+    assert page.groceries.over and page.groceries.left_cents == -10000
+    assert page.unpaid_cents == (120000 + 6000 + 8000 + 4000) + 50000
+
+
+def test_projection_unchanged_by_paying_daycare_from_the_bills_page(s, jan):
+    before = summary.month_summary(s, jan).projected_end_cents
+    paychecks.pay_next_daycare(s, jan)
+    s.commit()
+    assert summary.month_summary(s, jan).projected_end_cents == before
+
+
+def test_history_months_have_no_weekly_rows(s, jan):
+    old = Month(year=2026, month=6, is_history=True, locked=True)
+    s.add(old)
+    s.commit()
+    page = summary.bills_page(s, old)
+    assert page.groceries is None and page.daycare is None

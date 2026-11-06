@@ -120,25 +120,49 @@ def update_bill(
     check: Paycheck | None | object = ...,
     also_template: bool = False,
 ) -> None:
-    """Edit a bill for this month only, or (``also_template``) for future months too."""
+    """Edit a bill for this month only, or (``also_template``) for future months too.
+
+    A check line can differ from its bill on purpose (a check may set aside more than the
+    bill, or word it differently), so the line and the ledger entry only follow the bill for
+    what actually changed here. Saving a note must not reset them.
+    """
     ensure_editable(s.get(Month, bill.month_id))
+    old_name, old_amount = bill.name, bill.amount_cents
     if name is not None and name.strip():
         bill.name = name.strip()
     if amount_cents is not None:
         bill.amount_cents = abs(amount_cents)
     if note is not None:
         bill.note = note
+    name_changed = bill.name != old_name
+    amount_changed = bill.amount_cents != old_amount
+
     target_check = bill.assigned_check if check is ... else check
     target_id = target_check.id if target_check else None
-    # Only touch check lines when the bill has its own line or moves to another check.
-    # (Imported checks may cover several bills with one combined line; editing a bill's
-    # amount must not add a second line for it.)
-    if paychecks.bill_line(s, bill) is not None or target_id != bill.assigned_check_id:
+    line = paychecks.bill_line(s, bill)
+    if target_id != bill.assigned_check_id:
+        kept = (line.label, line.amount_cents) if line else None
         paychecks.attach_bill(s, bill, target_check)
-    if bill.paid and bill.paid_txn_id:
+        moved = paychecks.bill_line(s, bill)
+        if moved and kept:
+            moved.label = bill.name if name_changed else kept[0]
+            moved.amount_cents = -bill.amount_cents if amount_changed else kept[1]
+    elif line is not None:
+        # No line at all means a combined line covers this bill; don't add a second one.
+        if name_changed:
+            line.label = bill.name
+        if amount_changed:
+            line.amount_cents = -bill.amount_cents
+
+    if bill.paid and bill.paid_txn_id and (name_changed or amount_changed):
         txn = s.get(Txn, bill.paid_txn_id)
         if txn and txn.deleted_at is None:
-            ledger.update_txn(s, txn, amount_cents=-bill.amount_cents, description=bill.name)
+            ledger.update_txn(
+                s,
+                txn,
+                amount_cents=-bill.amount_cents if amount_changed else None,
+                description=bill.name if name_changed else None,
+            )
     if also_template:
         tpl = bill.template
         if tpl is None:

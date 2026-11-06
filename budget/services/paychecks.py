@@ -296,6 +296,31 @@ def unpaid_planned_lines(checks: list[Paycheck]) -> list[PaycheckLine]:
     return [ln for c in checks for ln in c.lines if ln.trackable and not ln.paid]
 
 
+def daycare_lines(checks: list[Paycheck]) -> list[PaycheckLine]:
+    """The month's weekly daycare lines, earliest week first."""
+    lines = [ln for c in checks for ln in c.lines if ln.kind == "daycare"]
+    return sorted(lines, key=lambda ln: (ln.line_date or ln.paycheck.pay_date, ln.id))
+
+
+def pay_next_daycare(s: Session, month: Month) -> Txn:
+    """ "Paid 1x": pay the earliest unpaid week, at that week's own amount."""
+    ensure_editable(month)
+    line = next((ln for ln in daycare_lines(checks_in_month(s, month)) if not ln.paid), None)
+    if line is None:
+        raise BudgetError("Every week is already paid.")
+    return mark_line_paid(s, line)
+
+
+def undo_last_daycare(s: Session, month: Month) -> PaycheckLine:
+    """Reverse the most recent paid week."""
+    ensure_editable(month)
+    paid = [ln for ln in daycare_lines(checks_in_month(s, month)) if ln.paid]
+    if not paid:
+        raise BudgetError("No week has been paid yet.")
+    mark_line_unpaid(s, paid[-1])
+    return paid[-1]
+
+
 def delete_line(s: Session, line: PaycheckLine) -> None:
     check = line.paycheck
     ensure_editable(s.get(Month, check.month_id))

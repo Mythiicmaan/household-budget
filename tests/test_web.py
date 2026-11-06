@@ -378,3 +378,51 @@ def test_saving_a_check_unchanged_leaves_its_bills_alone(client, app, jan):
     client.post(f"/check/{check_id}", data=form)
     with db(app) as s:
         assert s.get(MonthBill, rent_id).amount_cents == 125000
+
+
+def test_bills_page_daycare_paid_1x_and_undo(tmp_path):
+    (tmp_path / "config.toml").write_text(
+        CONFIG
+        + """
+[[seed.per_check_lines]]
+kind = "daycare"
+label = "Childcare"
+amount = "100.00"
+day_offset = 3
+""",
+        encoding="utf-8",
+    )
+    fresh = create_app(Paths(tmp_path))
+    with local_client(fresh) as c:
+        with db(fresh) as s:
+            from budget.services.months import start_month as svc_start
+
+            month_id = svc_start(s, 2027, 1, bank_balance_cents=100000).id
+            s.commit()
+        page = c.get("/bills").text
+        assert "Childcare" in page and "0 of 5 paid" in page and "Paid 1x" in page
+        assert "$600.00" in page  # the Groceries budget, same as Home
+
+        r = c.post(f"/month/{month_id}/daycare/pay", follow_redirects=False)
+        assert r.status_code == 303
+        assert "1 of 5 paid" in c.get("/bills").text
+        with db(fresh) as s:
+            t = s.scalar(select(Txn))
+            assert t.amount_cents == -10000 and t.pending
+
+        c.post(f"/month/{month_id}/daycare/undo")
+        assert "0 of 5 paid" in c.get("/bills").text
+
+
+def test_editing_bill_amount_on_the_bills_page(client, app, jan):
+    with db(app) as s:
+        rent = s.scalar(select(MonthBill).where(MonthBill.name == "Rent"))
+        rent_id, check_id = rent.id, rent.assigned_check_id
+    r = client.post(
+        f"/bill/{rent_id}",
+        data={"name": "Rent", "amount": "1250", "note": "", "check_id": str(check_id)},
+    )
+    assert r.status_code == 200
+    page = client.get("/bills").text
+    assert "$1,250.00" in page and "Edit" in page
+    assert "1250" in client.get("/checks").text

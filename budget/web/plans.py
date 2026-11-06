@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from budget.models import LINE_KINDS, Month, MonthBill, Paycheck, PaycheckLine, Person
 from budget.money import parse_money
-from budget.services import bills, months, paychecks
+from budget.services import bills, months, paychecks, summary
 from budget.services.common import BudgetError
 from budget.web.common import back_url, checkbox, get_db, redirect, render, resolve_month
 
@@ -34,19 +34,38 @@ def bills_page(request: Request, m: str | None = None, s: Session = Depends(get_
     month = resolve_month(s, m)
     if month is None:
         return redirect("/")
-    items = bills.bills_in_month(s, month)
+    page = summary.bills_page(s, month)
     return render(
         request,
         "bills.html",
         {
             "s": s,
             "month": month,
-            "bills": items,
+            "bills": page.bills,
+            "weekly": page,
             "checks": paychecks.checks_in_month(s, month),
-            "total": sum(b.amount_cents for b in items),
-            "unpaid_total": sum(b.amount_cents for b in items if not b.paid),
+            "total": page.total_cents,
+            "unpaid_total": page.unpaid_cents,
         },
     )
+
+
+@router.post("/month/{month_id}/daycare/pay")
+def pay_daycare(month_id: int, request: Request, s: Session = Depends(get_db)):
+    month = s.get(Month, month_id) or _404()
+    txn = paychecks.pay_next_daycare(s, month)
+    return redirect(
+        back_url(request, "/bills"),
+        f"{txn.description}: paid, added to ledger as pending",
+        undo=f"/month/{month_id}/daycare/undo",
+    )
+
+
+@router.post("/month/{month_id}/daycare/undo")
+def undo_daycare(month_id: int, request: Request, s: Session = Depends(get_db)):
+    month = s.get(Month, month_id) or _404()
+    line = paychecks.undo_last_daycare(s, month)
+    return redirect(back_url(request, "/bills"), f"{line.label}: not paid")
 
 
 @router.post("/bills/{month_id}/add")

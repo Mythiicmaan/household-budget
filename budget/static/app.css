@@ -212,6 +212,8 @@ table.simple td.amt, table.simple th.amt { text-align: right; }
 .line-row .del { width: 22px; height: 22px; }
 .line-status { margin: -2px 0 8px 2px; }
 .remainder { font-size: 1.15rem; font-weight: 800; }
+.grow { flex: 1; min-width: 0; }
+.bill-edit > summary { display: inline-block; margin-top: 4px; padding: 2px 0; color: var(--accent); font-size: 0.85rem; font-weight: 600; }
 .month-nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
 .month-nav a { white-space: nowrap; padding: 6px 12px; border-radius: 99px; background: var(--chip); color: var(--text); font-size: 0.85rem; }
 .month-nav a.on { background: var(--accent); color: #fff; }
