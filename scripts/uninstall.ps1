@@ -13,7 +13,7 @@
 [CmdletBinding()]
 param(
     [string]$DataDir = $(if ($env:BUDGET_DATA_DIR) { $env:BUDGET_DATA_DIR } else { 'C:\BudgetData' }),
-    [string]$BackupDir = 'E:\Backups\HouseholdBudget',
+    [string]$BackupDir = '',
     [string]$ServiceUser = 'budgetsvc',
     [string]$TaskName = 'Household Budget',
     [switch]$RemoveUser
@@ -35,6 +35,11 @@ if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
 
 $PyHome = (Get-Content (Join-Path $RepoDir '.venv\pyvenv.cfg') -ErrorAction SilentlyContinue |
     Where-Object { $_ -match '^\s*home\s*=' } | Select-Object -First 1) -replace '^\s*home\s*=\s*', ''
+# The backup folder comes from [backup] dir in the private config.toml.
+if (-not $BackupDir) {
+    $env:BUDGET_DATA_DIR = $DataDir
+    $BackupDir = "$(& (Join-Path $RepoDir '.venv\Scripts\python.exe') -c 'from budget.config import load_config; print(load_config().backup_dir or str())')".Trim()
+}
 foreach ($p in @($DataDir, $BackupDir, $RepoDir, $PyHome)) {
     if ($p -and (Test-Path $p)) {
         icacls $p /remove:g $ServiceUser /T /C /Q | Out-Null

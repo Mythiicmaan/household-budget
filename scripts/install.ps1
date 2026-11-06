@@ -20,7 +20,7 @@
 [CmdletBinding()]
 param(
     [string]$DataDir = $(if ($env:BUDGET_DATA_DIR) { $env:BUDGET_DATA_DIR } else { 'C:\BudgetData' }),
-    [string]$BackupDir = 'E:\Backups\HouseholdBudget',
+    [string]$BackupDir = '',
     [string]$ServiceUser = 'budgetsvc',
     [string]$TaskName = 'Household Budget',
     [int]$Port = 8765,
@@ -65,6 +65,12 @@ Ok "Python: $PyHome"
 if (-not (Test-Path (Join-Path $DataDir 'budget.db'))) { Stop-Install "No database at $DataDir\budget.db." }
 Ok "Data folder: $DataDir"
 
+# The backup folder comes from [backup] dir in the private config.toml.
+if (-not $BackupDir) {
+    $env:BUDGET_DATA_DIR = $DataDir
+    $BackupDir = "$(& $Python -c 'from budget.config import load_config; print(load_config().backup_dir or str())')".Trim()
+}
+if (-not $BackupDir) { Stop-Install "Set [backup] dir in $DataDir\config.toml." }
 $BackupDrive = Split-Path -Qualifier $BackupDir
 if (-not (Test-Path "$BackupDrive\")) {
     Stop-Install "Backup drive $BackupDrive is not connected. Plug in the backup drive (it must show as $BackupDrive)."
