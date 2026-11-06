@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 700" width="375" height="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="375" height="700" rx="0" fill="#f4f6f8"/>
+<rect x="0" y="0" width="375" height="44" rx="0" fill="#f4f6f8"/>
+<text x="16" y="28" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">January 2027</text>
+<text x="359" y="28" font-size="13" font-weight="400" fill="#2563eb" text-anchor="end">History · Settings</text>
+<line x1="0" y1="44" x2="375" y2="44" stroke="#e2e8f0"/>
+<rect x="0" y="0" width="375" height="700" rx="0" fill="#0206178c"/>
+<rect x="0" y="225" width="375" height="495" rx="20" fill="#ffffff"/>
+<text x="16" y="259" font-size="16" font-weight="700" fill="#0f172a" text-anchor="start">Add entry</text>
+<text x="359" y="259" font-size="14" font-weight="600" fill="#2563eb" text-anchor="end">Close</text>
+<rect x="16" y="275" width="343" height="44" rx="12" fill="#eef2f7"/>
+<rect x="20" y="279" width="163.5" height="36" rx="9" fill="#ffffff"/>
+<text x="101.75" y="302" font-size="13" font-weight="600" fill="#b91c1c" text-anchor="middle">Money out</text>
+<text x="273.25" y="302" font-size="13" font-weight="600" fill="#0f172a" text-anchor="middle">Money in</text>
+<rect x="16" y="331" width="343" height="62" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="187.5" y="367.0" font-size="28" font-weight="700" fill="#0f172a" text-anchor="middle">45.10</text>
+<rect x="16" y="405" width="343" height="44" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="28" y="432.0" font-size="14" font-weight="400" fill="#0f172a" text-anchor="start">Corner Market</text>
+<rect x="16" y="463" width="98" height="36" rx="18" fill="#2563eb"/>
+<text x="65.0" y="486" font-size="13" font-weight="400" fill="#fff" text-anchor="middle">Groceries</text>
+<rect x="122" y="463" width="50" height="36" rx="18" fill="#eef2f7"/>
+<text x="147.0" y="486" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Gas</text>
+<rect x="180" y="463" width="106" height="36" rx="18" fill="#eef2f7"/>
+<text x="233.0" y="486" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Eating Out</text>
+<rect x="294" y="463" width="58" height="36" rx="18" fill="#eef2f7"/>
+<text x="323.0" y="486" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Kids</text>
+<rect x="16" y="507" width="90" height="36" rx="18" fill="#eef2f7"/>
+<text x="61.0" y="530" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Shopping</text>
+<rect x="114" y="507" width="66" height="36" rx="18" fill="#eef2f7"/>
+<text x="147.0" y="530" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Bills</text>
+<rect x="188" y="507" width="66" height="36" rx="18" fill="#eef2f7"/>
+<text x="221.0" y="530" font-size="13" font-weight="400" fill="#0f172a" text-anchor="middle">Other</text>
+<text x="16" y="565" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Date</text>
+<text x="193.5" y="565" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Payment to card →</text>
+<rect x="16" y="573" width="165.5" height="44" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="28" y="600.0" font-size="14" font-weight="400" fill="#0f172a" text-anchor="start">Jan 12, 2027</text>
+<rect x="193.5" y="573" width="165.5" height="44" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="205.5" y="600.0" font-size="14" font-weight="400" fill="#0f172a" text-anchor="start">None</text>
+<rect x="16" y="631" width="343" height="46" rx="12" fill="#2563eb"/>
+<text x="187.5" y="660" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">Save</text>
+</svg>

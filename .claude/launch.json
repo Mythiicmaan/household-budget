@@ -4,8 +4,26 @@
     {
       "name": "budget-sample",
       "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-NoProfile", "-Command", "$env:BUDGET_DATA_DIR = (Join-Path $PWD 'data/sample'); ./.venv/Scripts/uvicorn.exe budget.app:app --host 127.0.0.1 --port $(if ($env:PORT) { $env:PORT } else { 8766 })"],
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:BUDGET_DATA_DIR = (Join-Path $PWD 'data/sample'); ./.venv/Scripts/uvicorn.exe budget.app:app --host 127.0.0.1 --port $(if ($env:PORT) { $env:PORT } else { 8766 })"
+      ],
       "port": 8766
+    },
+    {
+      "name": "readme-screens",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "docs/screens"
+      ],
+      "port": 8767
     }
   ]
 }

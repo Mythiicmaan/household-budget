@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 700" width="375" height="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="375" height="700" rx="0" fill="#f4f6f8"/>
+<rect x="0" y="0" width="375" height="44" rx="0" fill="#f4f6f8"/>
+<text x="16" y="28" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">January 2027</text>
+<text x="359" y="28" font-size="13" font-weight="400" fill="#2563eb" text-anchor="end">History · Settings</text>
+<line x1="0" y1="44" x2="375" y2="44" stroke="#e2e8f0"/>
+<rect x="16" y="56" width="343" height="104" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="82" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">RUNNING SURPLUS / DEFICIT</text>
+<text x="32" y="124" font-size="36" font-weight="800" fill="#15803d" text-anchor="start">$2,565.00</text>
+<text x="32" y="147" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">In $3,500.00 · Out -$935.00</text>
+<rect x="16" y="172" width="165.5" height="84" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="28" y="196" font-size="10" font-weight="400" fill="#64748b" text-anchor="start">TRUE STARTING BALANCE</text>
+<text x="28" y="226" font-size="19" font-weight="700" fill="#0f172a" text-anchor="start">$2,600.00</text>
+<rect x="193.5" y="172" width="165.5" height="84" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="205.5" y="196" font-size="10" font-weight="400" fill="#64748b" text-anchor="start">END OF MONTH, ALL PAID</text>
+<text x="205.5" y="226" font-size="19" font-weight="700" fill="#15803d" text-anchor="start">$8,330.00</text>
+<rect x="16" y="268" width="343" height="136" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="294" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Groceries</text>
+<text x="343" y="294" font-size="14" font-weight="600" fill="#0f172a" text-anchor="end">$515.00 left</text>
+<rect x="32" y="304" width="311" height="9" rx="4" fill="#eef2f7"/>
+<rect x="32" y="304" width="43.54" height="9" rx="4" fill="#15803d"/>
+<text x="32" y="330" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">of $600.00</text>
+<text x="32" y="352" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Gas</text>
+<text x="343" y="352" font-size="14" font-weight="600" fill="#0f172a" text-anchor="end">$170.00 left</text>
+<rect x="32" y="362" width="311" height="9" rx="4" fill="#eef2f7"/>
+<rect x="32" y="362" width="46.65" height="9" rx="4" fill="#15803d"/>
+<text x="32" y="388" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">of $200.00</text>
+<rect x="16" y="416" width="343" height="84" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="442" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">Next paycheck</text>
+<text x="32" y="466" font-size="14" font-weight="400" fill="#0f172a" text-anchor="start">Alex check 2 · Fri 1/15</text>
+<text x="343" y="466" font-size="14" font-weight="600" fill="#0f172a" text-anchor="end">$2,000.00</text>
+<text x="32" y="486" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Covers: Groceries (Fri 1/15), Childcare (Mon 1/18),…</text>
+<rect x="16" y="512" width="343" height="60" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="538" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">Still to pay this month</text>
+<text x="32" y="558" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">6 items planned</text>
+<circle cx="327" cy="594" r="32" fill="#2563eb"/>
+<rect x="314" y="592" width="26" height="4" rx="2" fill="#fff"/>
+<rect x="325" y="581" width="4" height="26" rx="2" fill="#fff"/>
+<rect x="0" y="640" width="375" height="60" rx="0" fill="#ffffff"/>
+<line x1="0" y1="640" x2="375" y2="640" stroke="#e2e8f0"/>
+<text x="37.5" y="676" font-size="12" font-weight="700" fill="#2563eb" text-anchor="middle">Home</text>
+<text x="112.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Ledger</text>
+<text x="187.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Bills</text>
+<text x="262.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Checks</text>
+<text x="337.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Cards</text>
+</svg>

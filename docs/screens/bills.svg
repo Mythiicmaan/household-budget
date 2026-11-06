@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 700" width="375" height="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="375" height="700" rx="0" fill="#f4f6f8"/>
+<rect x="0" y="0" width="375" height="44" rx="0" fill="#f4f6f8"/>
+<text x="16" y="28" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">Bills · January 2027</text>
+<text x="359" y="28" font-size="13" font-weight="400" fill="#2563eb" text-anchor="end">History · Settings</text>
+<line x1="0" y1="44" x2="375" y2="44" stroke="#e2e8f0"/>
+<rect x="16" y="56" width="343" height="72" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="80" font-size="10" font-weight="400" fill="#64748b" text-anchor="start">BILLS THIS MONTH</text>
+<text x="32" y="110" font-size="19" font-weight="700" fill="#0f172a" text-anchor="start">$2,695.00</text>
+<text x="343" y="80" font-size="10" font-weight="400" fill="#64748b" text-anchor="end">STILL UNPAID</text>
+<text x="343" y="110" font-size="19" font-weight="700" fill="#b45309" text-anchor="end">$2,165.00</text>
+<rect x="16" y="140" width="343" height="484" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="32" y="166" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Groceries</text>
+<text x="32" y="186" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">$85.00 spent · $515.00 left</text>
+<text x="343" y="174" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$600.00</text>
+<line x1="16" y1="202" x2="359" y2="202" stroke="#e2e8f0"/>
+<text x="32" y="228" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Childcare</text>
+<text x="32" y="248" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">2 of 5 paid</text>
+<rect x="295" y="217" width="48" height="30" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="319.0" y="237" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Undo</text>
+<rect x="220" y="217" width="69" height="30" rx="10" fill="#2563eb"/>
+<text x="254.5" y="237" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">Paid 1x</text>
+<text x="212" y="236" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$500.00</text>
+<line x1="16" y1="264" x2="359" y2="264" stroke="#e2e8f0"/>
+<text x="32" y="290" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Rent</text>
+<text x="32" y="310" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Alex check 2</text>
+<rect x="295" y="279" width="48" height="30" rx="10" fill="#2563eb"/>
+<text x="319.0" y="299" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">Paid</text>
+<text x="287" y="298" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$1,200.00</text>
+<line x1="16" y1="326" x2="359" y2="326" stroke="#e2e8f0"/>
+<text x="32" y="352" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Internet</text>
+<text x="32" y="372" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Alex check 1</text>
+<rect x="295" y="341" width="48" height="30" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="319.0" y="361" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Undo</text>
+<text x="287" y="360" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$60.00</text>
+<line x1="16" y1="388" x2="359" y2="388" stroke="#e2e8f0"/>
+<text x="32" y="414" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Electric</text>
+<text x="32" y="434" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Alex check 1</text>
+<rect x="295" y="403" width="48" height="30" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="319.0" y="423" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Undo</text>
+<text x="287" y="422" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$90.00</text>
+<line x1="16" y1="450" x2="359" y2="450" stroke="#e2e8f0"/>
+<text x="32" y="476" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Streaming</text>
+<text x="32" y="496" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Alex check 1</text>
+<rect x="295" y="465" width="48" height="30" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="319.0" y="485" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Undo</text>
+<text x="287" y="484" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$15.00</text>
+<line x1="16" y1="512" x2="359" y2="512" stroke="#e2e8f0"/>
+<text x="32" y="538" font-size="14" font-weight="700" fill="#0f172a" text-anchor="start">Phone</text>
+<text x="32" y="558" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Sam check 1</text>
+<rect x="295" y="527" width="48" height="30" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="319.0" y="547" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Undo</text>
+<text x="287" y="546" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">$80.00</text>
+<line x1="16" y1="574" x2="359" y2="574" stroke="#e2e8f0"/>
+<circle cx="327" cy="594" r="32" fill="#2563eb"/>
+<rect x="314" y="592" width="26" height="4" rx="2" fill="#fff"/>
+<rect x="325" y="581" width="4" height="26" rx="2" fill="#fff"/>
+<rect x="0" y="640" width="375" height="60" rx="0" fill="#ffffff"/>
+<line x1="0" y1="640" x2="375" y2="640" stroke="#e2e8f0"/>
+<text x="37.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Home</text>
+<text x="112.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Ledger</text>
+<text x="187.5" y="676" font-size="12" font-weight="700" fill="#2563eb" text-anchor="middle">Bills</text>
+<text x="262.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Checks</text>
+<text x="337.5" y="676" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Cards</text>
+</svg>
